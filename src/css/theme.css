@@ -1,0 +1,18 @@
+:root[data-theme='dark'] {
+    color-scheme: dark;
+
+    --text: #fff;
+    --bg: #000;
+    --thin: #181818;
+    --border: #26272B;
+
+}
+
+:root[data-theme='light'] {
+    color-scheme: light;
+
+    --text: #000;
+    --bg: #fff;
+    --thin: #181818;
+    --border: #E4E4E7;
+}
