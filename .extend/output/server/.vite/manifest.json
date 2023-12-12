@@ -22,12 +22,6 @@
   "_ssr.js": {
     "file": "chunks/ssr.js"
   },
-  "_theme.js": {
-    "file": "chunks/theme.js",
-    "imports": [
-      "_index.js"
-    ]
-  },
   "node_modules/@fontsource/inter/files/inter-latin-100-normal.woff": {
     "file": "_app/immutable/assets/inter-latin-100-normal.59ff1c64.woff",
     "src": "node_modules/@fontsource/inter/files/inter-latin-100-normal.woff"
@@ -190,7 +184,7 @@
     "src": "node_modules/@sveltejs/kit/src/runtime/server/index.js"
   },
   "src/pages/+layout.css": {
-    "file": "_app/immutable/assets/_layout.9e2200d9.css",
+    "file": "_app/immutable/assets/_layout.e41b3c8e.css",
     "src": "src/pages/+layout.css"
   },
   "src/pages/+layout.js": {
@@ -233,7 +227,7 @@
       "_app/immutable/assets/poppins-latin-900-normal.940cfac0.woff"
     ],
     "css": [
-      "_app/immutable/assets/_layout.9e2200d9.css"
+      "_app/immutable/assets/_layout.2ff2d25b.css"
     ],
     "file": "entries/pages/_layout.js",
     "isEntry": true,
@@ -246,12 +240,12 @@
   },
   "src/pages/+layout.svelte": {
     "css": [
-      "_app/immutable/assets/_layout.0e3f70f7.css"
+      "_app/immutable/assets/_layout.e41b3c8e.css"
     ],
     "file": "entries/pages/_layout.svelte.js",
     "imports": [
       "_ssr.js",
-      "_theme.js"
+      "_index.js"
     ],
     "isEntry": true,
     "src": "src/pages/+layout.svelte"
@@ -273,8 +267,7 @@
   "src/pages/index/+page.svelte": {
     "file": "entries/pages/index/_page.svelte.js",
     "imports": [
-      "_ssr.js",
-      "_theme.js"
+      "_ssr.js"
     ],
     "isEntry": true,
     "src": "src/pages/index/+page.svelte"

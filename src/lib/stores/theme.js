@@ -2,7 +2,7 @@ import { browser } from '$app/environment';
 import { writable } from 'svelte/store';
 
 const key = '@theme';
-export const theme = writable('light');
+export const theme = writable('system');
 const validThemes = ['dark', 'light', 'system'];
 
 const updateLocalStorage = (value) => {

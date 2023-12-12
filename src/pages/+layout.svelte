@@ -1,12 +1,14 @@
 <script>
 	import "../css/theme.css"
-	import { theme, onHydrated } from "../lib/stores/theme.js"
+	import { onHydrated } from "../lib/stores/theme.js"
 	import { onMount } from "svelte"
 	import Header from "../components/header.svelte"
+	import Footer from "../components/footer.svelte"
 	onMount(() => onHydrated())
 </script>
 
-<section class={`${$theme ? 'theme-dark' : 'theme-light'}`}>
+<section>
 	<Header/>
 	<slot/>
+	<Footer/>
 </section>

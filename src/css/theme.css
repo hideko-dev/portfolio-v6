@@ -3,9 +3,11 @@
 
     --text: #fff;
     --bg: #000;
-    --thin: #181818;
+    --bg-rgb: 0,0,0;
+    --thin: #afafaf;
+    --outline: #343434;
     --border: #26272B;
-
+    --little: #606060;
 }
 
 :root[data-theme='light'] {
@@ -13,6 +15,9 @@
 
     --text: #000;
     --bg: #fff;
-    --thin: #181818;
+    --bg-rgb: 255,255,255;
+    --thin: #707070;
+    --outline: #ececec;
     --border: #E4E4E7;
+    --little: #E4E4E7;
 }

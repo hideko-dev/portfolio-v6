@@ -3,12 +3,12 @@ import adapter from '@sveltejs/adapter-static';
 const config = {
 	kit: {
 		adapter: adapter({
-			fallback: 'fallback.html'
+			fallback: './stands/fallback.html'
 		}),
 		outDir: ".extend",
 		files: {
 			routes: "src/pages",
-			appTemplate: "./static.html"
+			appTemplate: "./stands/static.html"
 		}
 	},
 };

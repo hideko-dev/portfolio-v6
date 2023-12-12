@@ -56,7 +56,7 @@ var worker = {
     let is_static_asset = false;
     const filename = stripped_pathname.substring(1);
     if (filename) {
-      is_static_asset = manifest.assets.has(filename) || manifest.assets.has(filename + "/index.html");
+      is_static_asset = manifest.assets.has(filename) || manifest.assets.has(filename + "/index.stands");
     }
     const location = pathname.at(-1) === "/" ? stripped_pathname : pathname + "/";
     if (is_static_asset || prerendered.has(pathname)) {

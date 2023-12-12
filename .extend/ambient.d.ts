@@ -37,8 +37,10 @@ declare module '$env/static/private' {
 	export const CONDA_PROMPT_MODIFIER: string;
 	export const DriverData: string;
 	export const EDITOR: string;
-	export const EFC_3372: string;
+	export const EFC_5892: string;
 	export const FIG_JETBRAINS_SHELL_INTEGRATION: string;
+	export const FPS_BROWSER_APP_PROFILE_STRING: string;
+	export const FPS_BROWSER_USER_PROFILE_STRING: string;
 	export const GIT_LFS_PATH: string;
 	export const GRADLE_USER_HOME: string;
 	export const HOME: string;
@@ -74,6 +76,7 @@ declare module '$env/static/private' {
 	export const npm_package_version: string;
 	export const NPM_PREFIX_NPM_CLI_JS: string;
 	export const NUMBER_OF_PROCESSORS: string;
+	export const OANOCACHE: string;
 	export const OneDrive: string;
 	export const OneDriveConsumer: string;
 	export const OS: string;
@@ -152,8 +155,10 @@ declare module '$env/dynamic/private' {
 		CONDA_PROMPT_MODIFIER: string;
 		DriverData: string;
 		EDITOR: string;
-		EFC_3372: string;
+		EFC_5892: string;
 		FIG_JETBRAINS_SHELL_INTEGRATION: string;
+		FPS_BROWSER_APP_PROFILE_STRING: string;
+		FPS_BROWSER_USER_PROFILE_STRING: string;
 		GIT_LFS_PATH: string;
 		GRADLE_USER_HOME: string;
 		HOME: string;
@@ -189,6 +194,7 @@ declare module '$env/dynamic/private' {
 		npm_package_version: string;
 		NPM_PREFIX_NPM_CLI_JS: string;
 		NUMBER_OF_PROCESSORS: string;
+		OANOCACHE: string;
 		OneDrive: string;
 		OneDriveConsumer: string;
 		OS: string;
