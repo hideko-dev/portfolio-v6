@@ -5,6 +5,7 @@ const config = {
 		adapter: adapter({
 			fallback: './stands/fallback.html'
 		}),
+		appDir: "_svelte",
 		outDir: ".extend",
 		files: {
 			routes: "src/pages",

@@ -5,12 +5,12 @@ function __memo(fn) {
 }
 
 return {
-	appDir: "_app",
-	appPath: "_app",
+	appDir: "_svelte",
+	appPath: "_svelte",
 	assets: new Set(["favicon.ico"]),
 	mimeTypes: {},
 	_: {
-		client: {"start":"_app/immutable/entry/start.9064848f.js","app":"_app/immutable/entry/app.a8a79bbf.js","imports":["_app/immutable/entry/start.9064848f.js","_app/immutable/chunks/scheduler.abd4628c.js","_app/immutable/chunks/singletons.15d22da3.js","_app/immutable/chunks/index.5ba2287e.js","_app/immutable/entry/app.a8a79bbf.js","_app/immutable/chunks/scheduler.abd4628c.js","_app/immutable/chunks/index.4ad3ea3a.js"],"stylesheets":[],"fonts":[]},
+		client: {"start":"_svelte/immutable/entry/start.e23bf8b8.js","app":"_svelte/immutable/entry/app.33571d5f.js","imports":["_svelte/immutable/entry/start.e23bf8b8.js","_svelte/immutable/chunks/scheduler.abd4628c.js","_svelte/immutable/chunks/singletons.7480d111.js","_svelte/immutable/chunks/index.5ba2287e.js","_svelte/immutable/entry/app.33571d5f.js","_svelte/immutable/chunks/scheduler.abd4628c.js","_svelte/immutable/chunks/index.d9f5b77c.js"],"stylesheets":[],"fonts":[]},
 		nodes: [
 			__memo(() => import('./nodes/0.js')),
 			__memo(() => import('./nodes/1.js')),

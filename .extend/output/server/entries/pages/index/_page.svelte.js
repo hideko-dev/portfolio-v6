@@ -5,7 +5,7 @@ import { w as writable } from "../../../chunks/index.js";
 import { faPlug, faMeteor, faMicrochip } from "@fortawesome/free-solid-svg-icons";
 import { faCode } from "@fortawesome/free-solid-svg-icons/faCode";
 import "../../../chunks/cms.js";
-const catIcon = "/_app/immutable/assets/cat.dd7b11e1.webp";
+const catIcon = "/_svelte/immutable/assets/cat.dd7b11e1.webp";
 const about_svelte_svelte_type_style_lang = "";
 const css$4 = {
   code: '.bios.svelte-thff4j{margin:0 auto;width:35rem}.bio.svelte-thff4j{margin-top:15px}img.svelte-thff4j{float:right;margin-left:2rem;margin-bottom:1rem;border-radius:100%;outline:1px solid var(--border);aspect-ratio:1 / 1;height:130px;width:130px;object-fit:cover}a.svelte-thff4j{text-decoration:none;color:var(--text);position:relative}a.svelte-thff4j:after{content:"";position:absolute;left:0;bottom:-1px;width:100%;height:1px;border-radius:100px;background:var(--little);transition:all 0.2s}a.svelte-thff4j:hover::after{background:var(--text)}@media(max-width: 700px){.title.svelte-thff4j{margin-left:10%}.bios.svelte-thff4j{width:80%}img.svelte-thff4j{float:none;height:180px;width:180px}.img.svelte-thff4j{margin-top:1rem;display:flex;align-items:center;justify-content:center}}',
