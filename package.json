@@ -22,6 +22,7 @@
 		"@fortawesome/free-regular-svg-icons": "6.5.1",
 		"@fortawesome/free-solid-svg-icons": "^6.4.2",
 		"@sveltejs/adapter-static": "^2.0.3",
+		"@sveltejs/adapter-vercel": "4.0.2",
 		"axios": "^1.6.2",
 		"microcms-js-sdk": "2.7.0",
 		"openai": "^4.20.1",
