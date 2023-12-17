@@ -1,5 +1,5 @@
 <script>
-    import Title from "$lib/Title.svelte"
+    import Title from "$lib/title.svelte"
     import About from "./_components/about.svelte"
     import Tech from "./_components/tech.svelte"
 </script>

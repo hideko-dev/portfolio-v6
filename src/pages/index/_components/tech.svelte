@@ -1,11 +1,14 @@
 <script>
     import TechBar from "../_components/techBar.svelte"
     import TechItems from "../_components/techItems.svelte"
+    import Fa from "svelte-fa";
+    import PageTitle from "../../../components/pageTitle.svelte";
+    import {faLightbulb} from "@fortawesome/free-regular-svg-icons";
 </script>
 
 <section>
     <div class="titles">
-        <p class="title">Technologies</p>
+        <PageTitle title="Technology"/>
         <div class="bar"><TechBar/></div>
     </div>
 
@@ -15,10 +18,6 @@
 </section>
 
 <style>
-    .title {
-        font-weight: 700;
-        font-size: 25px;
-    }
     .titles {
         display: flex;
         align-items: center;
@@ -28,16 +27,16 @@
         margin-top: 4rem;
     }
     .items {
-        margin-top: 10px;
+        margin-top: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
     }
 
-    @media (max-width: 600px) {
+    @media (max-width: 700px) {
         .titles {
-            display: block;
+            margin-left: 10%;
         }
         .bar {
             margin-top: 8px;

@@ -1,4 +1,4 @@
-export const languages = [
+export const language = [
     "JavaScript",
     "Java",
     "Kotlin",
@@ -8,10 +8,17 @@ export const languages = [
     "HTML",
     "CSS"
 ];
-export const frameworks = [
+
+export const library = [
     "React",
-    "Next.js",
+    "jQuery",
     "Vue.js",
+    "Vite",
+    "Rollup"
+]
+
+export const framework = [
+    "Next.js",
     "Nuxt",
     "Svelte",
     "Sapper",
@@ -19,8 +26,11 @@ export const frameworks = [
     "Astro",
     "Tailwind CSS",
     "Material UI",
-    "Vite",
-    "Rollup",
-    "jQuery",
     ".NET Framework",
 ];
+
+export const technology = [
+    "Node.js",
+    "Electron",
+    "RiotJs"
+]

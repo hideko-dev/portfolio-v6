@@ -4577,7 +4577,7 @@ var init_microcms_js_sdk = __esm({
   }
 });
 
-// .extend/output/server/chunks/works.js
+// .extend/output/server/chunks/cms.js
 var cms_domain, cms_key;
 var init_works = __esm({
   ".extend/output/server/chunks/works.js"() {

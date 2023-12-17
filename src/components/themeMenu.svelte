@@ -4,12 +4,12 @@
     import ThemeIcon from "../icons/themeIcon.svelte";
     import { onMount } from "svelte";
     let sectionRef;
-    let style = "scale: 0.96; opacity: 0; pointer-events: none"
+    let style = "scale: 0.9; opacity: 0; pointer-events: none"
     $: {
         if($themeMenu) {
             style = "scale: 1; opacity: 1; pointer-events: all"
         } else {
-            style = "scale: 0.96; opacity: 0; pointer-events: none"
+            style = "scale: 0.9; opacity: 0; pointer-events: none"
         }
     }
     const styles = [
@@ -58,7 +58,7 @@
         user-select: none;
         border-radius: 10px;
         display: grid;
-        box-shadow: 0 0 5px 0 rgba(0, 0, 0, 0.1);
+        box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
     }
     .btn {
         font-size: 12px;

@@ -1,9 +1,14 @@
 <script>
     import catIcon from "$lib/assets/cat.webp"
+    import Fa from "svelte-fa";
+    import {faCircleUser} from "@fortawesome/free-regular-svg-icons";
+    import PageTitle from "../../../components/pageTitle.svelte";
 </script>
 
 <section>
-    <p class="title">About</p>
+    <div class="title">
+        <PageTitle title="About"/>
+    </div>
     <div class="bios">
         <div class="img">
             <img src={catIcon} alt="icon">
@@ -34,26 +39,22 @@
 </section>
 
 <style>
-    .title {
-        font-weight: 700;
-        font-size: 25px;
-    }
     .bios {
         margin: 0 auto;
-        width: 30rem;
+        width: 35rem;
     }
     .bio {
         margin-top: 15px;
     }
     img {
         float: right;
-        margin-left: 1rem;
+        margin-left: 2rem;
         margin-bottom: 1rem;
         border-radius: 100%;
         outline: 1px solid var(--border);
         aspect-ratio: 1 / 1;
-        height: 120px;
-        width: 120px;
+        height: 130px;
+        width: 130px;
         object-fit: cover;
     }
     a {
@@ -75,14 +76,17 @@
     a:hover::after {
         background: var(--text);
     }
-    @media (max-width: 600px) {
+    @media (max-width: 700px) {
+        .title {
+            margin-left: 10%;
+        }
         .bios {
-            width: 20rem;
+            width: 80%;
         }
         img {
             float: none;
-            height: 140px;
-            width: 140px;
+            height: 180px;
+            width: 180px;
         }
         .img {
             margin-top: 1rem;

@@ -1,9 +1,12 @@
 <script>
-    import { toggleThemeMenu } from "../lib/stores/themeMenu.js";
+    import { toggleThemeMenu } from "../lib/stores/themeMenu.js"
     import ThemeIcon from "../icons/themeIcon.svelte"
     import ThemeMenu from "./themeMenu.svelte"
-    import {faGithub, faInstagram} from "@fortawesome/free-brands-svg-icons";
-    import Fa from "svelte-fa";
+    import {faGithub, faInstagram} from "@fortawesome/free-brands-svg-icons"
+    import Fa from "svelte-fa"
+    import { onNavigate } from "$app/navigation";
+    import { onMount } from "svelte";
+    import HeaderNav from "./headerNav.svelte";
 
     const links = [
         {icon: faGithub, href: "https://github.com/hideko-dev"},
@@ -15,52 +18,34 @@
 <section>
     <div class="container">
         <div class="content">
-            <a class="title" href="/">
-                <p class="name">hideko</p>
-                <p class="sub">■ fullstack engineer</p>
-            </a>
-            <div class="links">
-                {#each links as link}
-                    <a href={link.href} class="link"><Fa icon={link.icon}/></a>
-                {/each}
+            <div class="left">
+                <a class="title" href="/">
+                    <p class="name">hideko</p>
+                    <p class="sub">● fullstack engineer</p>
+                </a>
+                <HeaderNav/>
             </div>
-            <div on:click={toggleThemeMenu} class="theme">
-                <div class="theme-icon">
-                    <ThemeIcon/>
+            <div class="right">
+                <div class="links">
+                    {#each links as link}
+                        <a href={link.href} class="link"><Fa icon={link.icon}/></a>
+                    {/each}
                 </div>
-                <ThemeMenu/>
+                <div on:click={toggleThemeMenu} class="theme">
+                    <div class="theme-icon">
+                        <ThemeIcon/>
+                    </div>
+                    <ThemeMenu/>
+                </div>
             </div>
-        </div>
-        <div class="navs">
-            <a class="nav" href="/works">works</a>
-            <a class="nav" href="/contact">contact</a>
         </div>
     </div>
 </section>
 
 <style>
     .container {
-        width: 30.2rem;
+        width: 35.2rem;
         display: block;
-    }
-    .navs {
-        margin-top: 10px;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    .nav {
-        text-decoration: none;
-        font-size: 15px;
-        color: var(--thin);
-        transition: all 0.2s;
-        padding-inline: 10px;
-        padding-block: 2px;
-        border-radius: 100px;
-        background: var(--outline);
-    }
-    .nav:hover {
-        color: var(--text);
     }
     .title {
         text-decoration: none;
@@ -76,6 +61,11 @@
         margin-top: 2px;
         font-size: 14px;
     }
+    .right {
+        display: flex;
+        align-items: center;
+        margin: 0 0 0 auto;
+    }
     section {
         display: flex;
         justify-content: center;
@@ -84,7 +74,7 @@
         position: fixed;
         width: 100%;
         padding: 2rem;
-        background: rgba(var(--bg-rgb), 0.8);
+        background: rgba(var(--bg-rgb), 0.75);
         backdrop-filter: blur(10px);
         z-index: 100;
     }
@@ -93,8 +83,14 @@
         align-items: center;
         justify-content: center;
     }
-    @media (max-width: 600px) {
-
+    @media (max-width: 700px) {
+        section {
+            padding: 0;
+            width: 100%;
+        }
+        .container {
+            width: 81%;
+        }
     }
     .theme {
         width: 1.9rem;

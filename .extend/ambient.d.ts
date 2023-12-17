@@ -26,6 +26,9 @@
  * ```
  */
 declare module '$env/static/private' {
+	export const VITE_FORMSPREE_ENDPOINT: string;
+	export const VITE_MICROCMS_SERVICE_DOMAIN: string;
+	export const VITE_MICROCMS_API_KEY: string;
 	export const ALLUSERSPROFILE: string;
 	export const APPDATA: string;
 	export const ChocolateyInstall: string;
@@ -37,7 +40,7 @@ declare module '$env/static/private' {
 	export const CONDA_PROMPT_MODIFIER: string;
 	export const DriverData: string;
 	export const EDITOR: string;
-	export const EFC_5892: string;
+	export const EFC_6096: string;
 	export const FIG_JETBRAINS_SHELL_INTEGRATION: string;
 	export const FPS_BROWSER_APP_PROFILE_STRING: string;
 	export const FPS_BROWSER_USER_PROFILE_STRING: string;
@@ -61,10 +64,12 @@ declare module '$env/static/private' {
 	export const npm_config_global_prefix: string;
 	export const npm_config_init_module: string;
 	export const npm_config_local_prefix: string;
+	export const npm_config_lockfile: string;
 	export const npm_config_metrics_registry: string;
 	export const npm_config_node_gyp: string;
 	export const npm_config_noproxy: string;
 	export const npm_config_prefix: string;
+	export const npm_config_save_exact: string;
 	export const npm_config_userconfig: string;
 	export const npm_config_user_agent: string;
 	export const npm_execpath: string;
@@ -144,6 +149,9 @@ declare module '$env/static/public' {
  */
 declare module '$env/dynamic/private' {
 	export const env: {
+		VITE_FORMSPREE_ENDPOINT: string;
+		VITE_MICROCMS_SERVICE_DOMAIN: string;
+		VITE_MICROCMS_API_KEY: string;
 		ALLUSERSPROFILE: string;
 		APPDATA: string;
 		ChocolateyInstall: string;
@@ -155,7 +163,7 @@ declare module '$env/dynamic/private' {
 		CONDA_PROMPT_MODIFIER: string;
 		DriverData: string;
 		EDITOR: string;
-		EFC_5892: string;
+		EFC_6096: string;
 		FIG_JETBRAINS_SHELL_INTEGRATION: string;
 		FPS_BROWSER_APP_PROFILE_STRING: string;
 		FPS_BROWSER_USER_PROFILE_STRING: string;
@@ -179,10 +187,12 @@ declare module '$env/dynamic/private' {
 		npm_config_global_prefix: string;
 		npm_config_init_module: string;
 		npm_config_local_prefix: string;
+		npm_config_lockfile: string;
 		npm_config_metrics_registry: string;
 		npm_config_node_gyp: string;
 		npm_config_noproxy: string;
 		npm_config_prefix: string;
+		npm_config_save_exact: string;
 		npm_config_userconfig: string;
 		npm_config_user_agent: string;
 		npm_execpath: string;
