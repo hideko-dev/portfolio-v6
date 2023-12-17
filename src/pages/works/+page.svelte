@@ -25,7 +25,7 @@
                 {#if datas.length > 0}
                     <div class="contents">
                         {#each datas as data}
-                            <a href="/works/{data.id}" class="item">
+                            <a href={data.website} class="item">
                             <span class="titles">
                                 <p class="title">{data.title}</p>
                                 <span class="stats">
