@@ -14,17 +14,17 @@ export async function sendForm(mail, message){
     })
     setTimeout(() => {
         if(form === "success") {
-            toast.success("aaa", {
+            toast.success("Transmission completed.", {
                 position: "bottom-center",
                 style
             })
         } else if(form === "error.msg") {
-            toast.error("Message is non valid", {
+            toast.error("Please write your message.", {
                 position: "bottom-center",
                 style
             })
         } else if(form === "error.mail") {
-            toast.error("Mail is non valid", {
+            toast.error("The format of the email is wrong.", {
                 position: "bottom-center",
                 style
             })
