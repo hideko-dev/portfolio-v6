@@ -1,13 +1,15 @@
 <script>
-    import { themeMenu } from "../lib/stores/themeMenu.js";
+    import { themeMenu, toggleThemeMenu } from "../lib/stores/themeMenu.js";
     import { setTheme } from "../lib/stores/theme.js";
     import ThemeIcon from "../icons/themeIcon.svelte";
-    let style = "scale: 0.96; opacity: 0"
+    import { onMount } from "svelte";
+    let sectionRef;
+    let style = "scale: 0.9; opacity: 0; pointer-events: none"
     $: {
         if($themeMenu) {
-            style = "scale: 1; opacity: 1"
+            style = "scale: 1; opacity: 1; pointer-events: all"
         } else {
-            style = "scale: 0.96; opacity: 0"
+            style = "scale: 0.9; opacity: 0; pointer-events: none"
         }
     }
     const styles = [
@@ -15,9 +17,23 @@
         {theme: "light", name: "Light"},
         {theme: "system", name: "System"}
     ];
+
+    onMount(() => {
+        window.addEventListener("click", handleOutsideClick);
+        return () => window.removeEventListener("click", handleOutsideClick);
+    });
+    function handleOutsideClick(event) {
+        const isSectionClick = sectionRef && sectionRef.contains(event.target);
+        const isThemeClick = event.target.closest('.theme');
+        if (!isSectionClick && !isThemeClick) {
+            if($themeMenu) {
+                toggleThemeMenu()
+            }
+        }
+    }
 </script>
 
-<section style={style}>
+<section style={style} bind:this={sectionRef}>
     {#each styles as s}
         <div class="btn" on:click={() => setTheme(s.theme)}>
             <ThemeIcon mode={s.theme}/>
@@ -42,6 +58,7 @@
         user-select: none;
         border-radius: 10px;
         display: grid;
+        box-shadow: 0 0 10px 0 rgba(0, 0, 0, 0.1);
     }
     .btn {
         font-size: 12px;

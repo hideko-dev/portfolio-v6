@@ -5,17 +5,19 @@ function __memo(fn) {
 }
 
 return {
-	appDir: "_app",
-	appPath: "_app",
-	assets: new Set([]),
+	appDir: "_svelte",
+	appPath: "_svelte",
+	assets: new Set(["favicon.ico"]),
 	mimeTypes: {},
 	_: {
-		client: {"start":"_app/immutable/entry/start.a1fe9b9d.js","app":"_app/immutable/entry/app.0062f9d4.js","imports":["_app/immutable/entry/start.a1fe9b9d.js","_app/immutable/chunks/scheduler.05577254.js","_app/immutable/chunks/singletons.23460fc6.js","_app/immutable/chunks/index.8b46c88b.js","_app/immutable/entry/app.0062f9d4.js","_app/immutable/chunks/scheduler.05577254.js","_app/immutable/chunks/index.36e0c5a6.js"],"stylesheets":[],"fonts":[]},
+		client: {"start":"_svelte/immutable/entry/start.e23bf8b8.js","app":"_svelte/immutable/entry/app.33571d5f.js","imports":["_svelte/immutable/entry/start.e23bf8b8.js","_svelte/immutable/chunks/scheduler.abd4628c.js","_svelte/immutable/chunks/singletons.7480d111.js","_svelte/immutable/chunks/index.5ba2287e.js","_svelte/immutable/entry/app.33571d5f.js","_svelte/immutable/chunks/scheduler.abd4628c.js","_svelte/immutable/chunks/index.d9f5b77c.js"],"stylesheets":[],"fonts":[]},
 		nodes: [
 			__memo(() => import('./nodes/0.js')),
 			__memo(() => import('./nodes/1.js')),
 			__memo(() => import('./nodes/2.js')),
-			__memo(() => import('./nodes/3.js'))
+			__memo(() => import('./nodes/3.js')),
+			__memo(() => import('./nodes/4.js')),
+			__memo(() => import('./nodes/5.js'))
 		],
 		routes: [
 			{
@@ -26,10 +28,24 @@ return {
 				endpoint: __memo(() => import('./entries/endpoints/_server.js'))
 			},
 			{
+				id: "/contact",
+				pattern: /^\/contact\/?$/,
+				params: [],
+				page: { layouts: [0,], errors: [1,], leaf: 3 },
+				endpoint: null
+			},
+			{
 				id: "/index",
 				pattern: /^\/index\/?$/,
 				params: [],
-				page: { layouts: [0,], errors: [1,], leaf: 3 },
+				page: { layouts: [0,], errors: [1,], leaf: 4 },
+				endpoint: null
+			},
+			{
+				id: "/works",
+				pattern: /^\/works\/?$/,
+				params: [],
+				page: { layouts: [0,], errors: [1,], leaf: 5 },
 				endpoint: null
 			}
 		],

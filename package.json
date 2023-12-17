@@ -19,10 +19,12 @@
 		"@fontsource/inter": "^5.0.15",
 		"@fontsource/poppins": "^5.0.8",
 		"@fortawesome/free-brands-svg-icons": "^6.4.2",
+		"@fortawesome/free-regular-svg-icons": "6.5.1",
 		"@fortawesome/free-solid-svg-icons": "^6.4.2",
 		"@sveltejs/adapter-static": "^2.0.3",
-		"axios": "^1.6.2",
-		"openai": "^4.20.1",
-		"svelte-fa": "^3.0.4"
+		"@sveltejs/adapter-vercel": "4.0.2",
+		"microcms-js-sdk": "2.7.0",
+		"svelte-fa": "^3.0.4",
+		"svelte-french-toast": "1.2.0"
 	}
 }

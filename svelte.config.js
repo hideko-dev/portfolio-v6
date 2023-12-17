@@ -1,14 +1,15 @@
-import adapter from '@sveltejs/adapter-static';
+import adapter from '@sveltejs/adapter-vercel';
 
 const config = {
 	kit: {
 		adapter: adapter({
-			fallback: 'fallback.html'
+			fallback: './stands/fallback.html'
 		}),
+		appDir: "_svelte",
 		outDir: ".extend",
 		files: {
 			routes: "src/pages",
-			appTemplate: "./static.html"
+			appTemplate: "./stands/static.html"
 		}
 	},
 };

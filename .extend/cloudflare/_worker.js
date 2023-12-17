@@ -1040,7 +1040,7 @@ var init_page_svelte = __esm({
     init_ssr();
     catIcon = "data:image/webp;base64,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";
     css$22 = {
-      code: 'section.svelte-1t22gv0{margin-top:7rem}.title.svelte-1t22gv0{font-weight:700;font-size:25px}.bios.svelte-1t22gv0{margin:0 auto;width:30rem}.bio.svelte-1t22gv0{margin-top:15px}img.svelte-1t22gv0{float:right;margin-left:1rem;margin-bottom:1rem;border-radius:100%;outline:1px solid var(--border);aspect-ratio:1 / 1;height:120px;width:120px;object-fit:cover}a.svelte-1t22gv0{text-decoration:none;color:var(--text);position:relative}a.svelte-1t22gv0:after{content:"";position:absolute;left:0;bottom:0;width:100%;height:1px;background:var(--text-thin);transition:all 0.2s}a.svelte-1t22gv0:hover::before{background:var(--text)\r\n    }@media(max-width: 600px){.bios.svelte-1t22gv0{width:20rem}}',
+      code: 'section.svelte-1t22gv0{margin-top:7rem}.title.svelte-1t22gv0{font-weight:700;font-size:25px}.bios.svelte-1t22gv0{margin:0 auto;width:30rem}.tech.svelte-1t22gv0{margin-top:15px}img.svelte-1t22gv0{float:right;margin-left:1rem;margin-bottom:1rem;border-radius:100%;outline:1px solid var(--border);aspect-ratio:1 / 1;height:120px;width:120px;object-fit:cover}a.svelte-1t22gv0{text-decoration:none;color:var(--text);position:relative}a.svelte-1t22gv0:after{content:"";position:absolute;left:0;bottom:0;width:100%;height:1px;background:var(--text-thin);transition:all 0.2s}a.svelte-1t22gv0:hover::before{background:var(--text)\r\n    }@media(max-width: 600px){.bios.svelte-1t22gv0{width:20rem}}',
       map: null
     };
     About = create_ssr_component(($$result, $$props, $$bindings, slots) => {
@@ -4577,7 +4577,7 @@ var init_microcms_js_sdk = __esm({
   }
 });
 
-// .extend/output/server/chunks/works.js
+// .extend/output/server/chunks/cms.js
 var cms_domain, cms_key;
 var init_works = __esm({
   ".extend/output/server/chunks/works.js"() {
@@ -4803,8 +4803,8 @@ var options = {
   root: Root,
   service_worker: false,
   templates: {
-    app: ({ head, body, assets: assets2, nonce, env }) => '<!DOCTYPE html>\n<html lang="en">\n	<head>\n		<meta charset="utf-8" />\n		<link rel="icon" href="' + assets2 + '/icon.svg" />\n		<meta name="viewport" content="width=device-width, initial-scale=1" />\n		' + head + '\n	</head>\n	<body data-sveltekit-preload-data="hover">\n		<div style="display: contents">' + body + "</div>\n	</body>\n</html>\n",
-    error: ({ status, message }) => '<!DOCTYPE html>\n<html lang="en">\n	<head>\n		<meta charset="utf-8" />\n		<title>' + message + `</title>
+    app: ({ head, body, assets: assets2, nonce, env }) => '<!DOCTYPE stands>\n<stands lang="en">\n	<head>\n		<meta charset="utf-8" />\n		<link rel="icon" href="' + assets2 + '/icon.svg" />\n		<meta name="viewport" content="width=device-width, initial-scale=1" />\n		' + head + '\n	</head>\n	<body data-sveltekit-preload-data="hover">\n		<div style="display: contents">' + body + "</div>\n	</body>\n</stands>\n",
+    error: ({ status, message }) => '<!DOCTYPE stands>\n<stands lang="en">\n	<head>\n		<meta charset="utf-8" />\n		<title>' + message + `</title>
 
 		<style>
 			body {
@@ -4863,7 +4863,7 @@ var options = {
 	</head>
 	<body>
 		<div class="error">
-			<span class="status">` + status + '</span>\n			<div class="message">\n				<h1>' + message + "</h1>\n			</div>\n		</div>\n	</body>\n</html>\n"
+			<span class="status">` + status + '</span>\n			<div class="message">\n				<h1>' + message + "</h1>\n			</div>\n		</div>\n	</body>\n</stands>\n"
   },
   version_hash: "1d1b37b"
 };
@@ -5536,7 +5536,7 @@ function allowed_methods(mod) {
 function static_error_page(options2, status, message) {
   let page2 = options2.templates.error({ status, message });
   return text(page2, {
-    headers: { "content-type": "text/html; charset=utf-8" },
+    headers: { "content-type": "text/stands; charset=utf-8" },
     status
   });
 }
@@ -5544,9 +5544,9 @@ async function handle_fatal_error(event, options2, error2) {
   error2 = error2 instanceof HttpError ? error2 : coalesce_to_error(error2);
   const status = error2 instanceof HttpError ? error2.status : 500;
   const body = await handle_error_and_jsonify(event, options2, error2);
-  const type = negotiate(event.request.headers.get("accept") || "text/html", [
+  const type = negotiate(event.request.headers.get("accept") || "text/stands", [
     "application/json",
-    "text/html"
+    "text/stands"
   ]);
   if (event.isDataRequest || type === "application/json") {
     return json(body, {
@@ -5656,7 +5656,7 @@ function is_endpoint_request(event) {
   if (method === "POST" && headers.get("x-sveltekit-action") === "true")
     return false;
   const accept = event.request.headers.get("accept") ?? "*/*";
-  return negotiate(accept, ["*", "text/html"]) !== "text/html";
+  return negotiate(accept, ["*", "text/stands"]) !== "text/stands";
 }
 function compact(arr) {
   return arr.filter(
@@ -5754,7 +5754,7 @@ function strip_data_suffix(pathname) {
 function is_action_json_request(event) {
   const accept = negotiate(event.request.headers.get("accept") ?? "*/*", [
     "application/json",
-    "text/html"
+    "text/stands"
   ]);
   return accept === "application/json" && event.request.method === "POST";
 }
@@ -6832,7 +6832,7 @@ async function render_response({
   }
   const headers = new Headers({
     "x-sveltekit-page": "true",
-    "content-type": "text/html"
+    "content-type": "text/stands"
   });
   if (state.prerendering) {
     const http_equiv = [];
@@ -6893,7 +6893,7 @@ async function render_response({
     }),
     {
       headers: {
-        "content-type": "text/html"
+        "content-type": "text/stands"
       }
     }
   );
@@ -7672,7 +7672,7 @@ function create_fetch({ event, options: options2, manifest: manifest2, state, ge
         if (is_asset || is_asset_html) {
           const file = is_asset ? filename : filename_html;
           if (state.read) {
-            const type = is_asset ? manifest2.mimeTypes[filename.slice(filename.lastIndexOf("."))] : "text/html";
+            const type = is_asset ? manifest2.mimeTypes[filename.slice(filename.lastIndexOf("."))] : "text/stands";
             return new Response(state.read(file), {
               headers: type ? { "content-type": type } : {}
             });
@@ -8338,7 +8338,7 @@ var worker = {
     let is_static_asset = false;
     const filename = stripped_pathname.substring(1);
     if (filename) {
-      is_static_asset = manifest.assets.has(filename) || manifest.assets.has(filename + "/index.html");
+      is_static_asset = manifest.assets.has(filename) || manifest.assets.has(filename + "/index.stands");
     }
     const location = pathname.at(-1) === "/" ? stripped_pathname : pathname + "/";
     if (is_static_asset || prerendered.has(pathname)) {

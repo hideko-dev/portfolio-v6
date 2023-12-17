@@ -5,18 +5,19 @@ function __memo(fn) {
 }
 
 return {
-	appDir: "_app",
-	appPath: "_app",
-	assets: new Set(["favicon.png","robots.txt"]),
-	mimeTypes: {".png":"image/png",".txt":"text/plain"},
+	appDir: "_svelte",
+	appPath: "_svelte",
+	assets: new Set(["favicon.ico"]),
+	mimeTypes: {},
 	_: {
-		client: {"start":"_app/immutable/entry/start.c666a48b.js","app":"_app/immutable/entry/app.bc4ddaf4.js","imports":["_app/immutable/entry/start.c666a48b.js","_app/immutable/chunks/scheduler.0f962ddd.js","_app/immutable/chunks/singletons.7a1e9084.js","_app/immutable/entry/app.bc4ddaf4.js","_app/immutable/chunks/scheduler.0f962ddd.js","_app/immutable/chunks/index.9ade12cc.js"],"stylesheets":[],"fonts":[]},
+		client: {"start":"_svelte/immutable/entry/start.e23bf8b8.js","app":"_svelte/immutable/entry/app.33571d5f.js","imports":["_svelte/immutable/entry/start.e23bf8b8.js","_svelte/immutable/chunks/scheduler.abd4628c.js","_svelte/immutable/chunks/singletons.7480d111.js","_svelte/immutable/chunks/index.5ba2287e.js","_svelte/immutable/entry/app.33571d5f.js","_svelte/immutable/chunks/scheduler.abd4628c.js","_svelte/immutable/chunks/index.d9f5b77c.js"],"stylesheets":[],"fonts":[]},
 		nodes: [
 			__memo(() => import('../output/server/nodes/0.js')),
 			__memo(() => import('../output/server/nodes/1.js')),
 			__memo(() => import('../output/server/nodes/2.js')),
 			__memo(() => import('../output/server/nodes/3.js')),
-			__memo(() => import('../output/server/nodes/4.js'))
+			__memo(() => import('../output/server/nodes/4.js')),
+			__memo(() => import('../output/server/nodes/5.js'))
 		],
 		routes: [
 			{
@@ -24,20 +25,27 @@ return {
 				pattern: /^\/$/,
 				params: [],
 				page: { layouts: [0,], errors: [1,], leaf: 2 },
-				endpoint: null
+				endpoint: __memo(() => import('../output/server/entries/endpoints/_server.js'))
 			},
 			{
-				id: "/about",
-				pattern: /^\/about\/?$/,
+				id: "/contact",
+				pattern: /^\/contact\/?$/,
 				params: [],
 				page: { layouts: [0,], errors: [1,], leaf: 3 },
 				endpoint: null
 			},
 			{
-				id: "/home",
-				pattern: /^\/home\/?$/,
+				id: "/index",
+				pattern: /^\/index\/?$/,
 				params: [],
 				page: { layouts: [0,], errors: [1,], leaf: 4 },
+				endpoint: null
+			},
+			{
+				id: "/works",
+				pattern: /^\/works\/?$/,
+				params: [],
+				page: { layouts: [0,], errors: [1,], leaf: 5 },
 				endpoint: null
 			}
 		],
