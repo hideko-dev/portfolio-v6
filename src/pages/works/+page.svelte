@@ -98,7 +98,7 @@
         display: block;
         text-decoration: none;
         color: var(--text);
-        border-radius: 5px;
+        border-radius: 10px;
         padding-block: 10px;
         transition: all 0.2s;
         padding-inline: 2px;
@@ -109,10 +109,11 @@
         position: absolute;
         left: 0;
         top: 0;
-        width: 0;
+        width: 100%;
+        opacity: 0;
         height: 100%;
-        background: linear-gradient(to right, var(--btn-thin), transparent);
-        border-radius: 5px;
+        background: linear-gradient(to right, var(--bg-thin), transparent);
+        border-radius: 10px;
         z-index: -1;
         transition: all 0.2s ease;
     }
@@ -120,7 +121,8 @@
         padding-inline: 13px;
     }
     .item:hover::before {
-        width: 100%;
+        /*width: 100%;*/
+        opacity: 1;
     }
     .bio {
         font-size: 14px;

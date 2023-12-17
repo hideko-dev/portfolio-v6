@@ -4,6 +4,7 @@
     --text: #f1f1f1;
     --text-rgb: 241,241,241;
     --bg: #131313;
+    --bg-thin: #232323;
     --bg-rgb: 19,19,19;
     --thin: #afafaf;
     --outline: #343434;
@@ -20,6 +21,7 @@
     --text: #000;
     --text-rgb: 0,0,0;
     --bg: #fff;
+    --bg-thin: #f3f3f3;
     --bg-rgb: 255,255,255;
     --thin: #707070;
     --outline: #ececec;
