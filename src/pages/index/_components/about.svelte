@@ -51,6 +51,8 @@
         margin-left: 2rem;
         margin-bottom: 1rem;
         border-radius: 100%;
+        -webkit-border-radius: 100%;
+        -moz-border-radius: 100%;
         outline: 1px solid var(--border);
         aspect-ratio: 1 / 1;
         height: 130px;
