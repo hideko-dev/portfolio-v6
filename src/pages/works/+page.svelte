@@ -63,7 +63,9 @@
     section {
         display: flex;
         justify-content: center;
-        height: 100vh;
+        min-height: 100vh;
+        height: max-content;
+        padding-block: 2rem;
         padding-top: 11rem;
     }
     .items {

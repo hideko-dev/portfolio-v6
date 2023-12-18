@@ -72,7 +72,6 @@
         bottom: -1px;
         width: 100%;
         height: 1px;
-        border-radius: 100px;
         background:var(--little);
         transition: all 0.2s;
     }
