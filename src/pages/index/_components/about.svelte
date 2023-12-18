@@ -54,7 +54,7 @@
         margin-left: 2rem;
         margin-bottom: 1rem;
         border-radius: 100%;
-        outline: 1px solid var(--border);
+        border: 1px solid var(--border);
         aspect-ratio: 1 / 1;
         height: 130px;
         width: 130px;
