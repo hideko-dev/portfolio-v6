@@ -38,20 +38,20 @@
     }
     .inputs {
         background: var(--bg);
-        border: 1px solid var(--border);
+        border: 1px solid var(--outline);
         border-radius: 8px;
         padding: 1rem;
         transition: all 0.2s;
-        outline: 1px solid transparent;
         margin-block: 3px;
         font-family: 'Inter', sans-serif;
         font-weight: 500;
+        outline: none;
     }
     .inputs:hover {
-        border-color: var(--text);
+        border-color: var(--thin);
     }
     .inputs:focus {
-        outline-color: var(--text);
+        border-color: var(--text);
     }
     input {
         height: 2.5rem;

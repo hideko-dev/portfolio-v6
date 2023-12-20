@@ -37,15 +37,6 @@
 </div>
 
 <style>
-    .box {
-        height: 1.6rem;
-        position: absolute;
-        z-index: -1;
-        border-radius: 100px;
-        background: var(--text);
-        opacity: 1;
-        transition: all 0.3s;
-    }
     .navtext {
         z-index: 2;
     }
@@ -55,9 +46,20 @@
         display: flex;
         align-items: center;
         border: 1px solid var(--border);
-        z-index: -1;
         background: rgba(var(--bg-rgb), 0.2);
         backdrop-filter: blur(10px);
+        position: relative;
+        width: 8.5rem;
+        box-shadow: 0 0 8px 0 rgba(0, 0, 0, 0.05);
+    }
+    .box {
+        position: absolute;
+        height: 1.6rem;
+        z-index: -1;
+        border-radius: 100px;
+        background: var(--text);
+        opacity: 1;
+        transition: all 0.3s;
     }
     .nav {
         display: flex;

@@ -46,12 +46,15 @@
     .bio {
         margin-top: 15px;
     }
+    .img {
+        border-radius: 100%;
+    }
     img {
         float: right;
         margin-left: 2rem;
         margin-bottom: 1rem;
         border-radius: 100%;
-        outline: 1px solid var(--border);
+        border: 1px solid var(--border);
         aspect-ratio: 1 / 1;
         height: 130px;
         width: 130px;
@@ -69,7 +72,6 @@
         bottom: -1px;
         width: 100%;
         height: 1px;
-        border-radius: 100px;
         background:var(--little);
         transition: all 0.2s;
     }
