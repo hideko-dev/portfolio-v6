@@ -12,8 +12,8 @@
         technology = []
 
     onMount(async () => {
-        const res = await cms.get({ endpoint: "technologies" });
-        const groupedData = res.contents.reduce((acc, item) => {
+        const res = await cms.getAllContents({ endpoint: "technologies" });
+        const groupedData = res.reduce((acc, item) => {
             const type = item.type[0];
             if (!acc[type]) {
                 acc[type] = [];
@@ -25,6 +25,8 @@
             });
             return acc;
         }, {});
+
+        console.log(res.contents)
 
         language = groupedData["language"] || [];
         library = groupedData["library"] || [];
