@@ -2,6 +2,10 @@ import { c as create_ssr_component, s as setContext, v as validate_component, m 
 let base = "";
 let assets = base;
 const initial = { base, assets };
+function override(paths) {
+  base = paths.base;
+  assets = paths.assets;
+}
 function reset() {
   base = initial.base;
   assets = initial.assets;
@@ -10,14 +14,20 @@ function set_assets(path) {
   assets = initial.assets = path;
 }
 let public_env = {};
+let safe_public_env = {};
 function set_private_env(environment) {
 }
 function set_public_env(environment) {
   public_env = environment;
 }
+function set_safe_public_env(environment) {
+  safe_public_env = environment;
+}
 function afterUpdate() {
 }
+let building = false;
 function set_building() {
+  building = true;
 }
 const Root = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   let { stores } = $$props;
@@ -93,10 +103,10 @@ const Root = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   return $$rendered;
 });
 const options = {
+  app_dir: "_svelte",
   app_template_contains_nonce: false,
   csp: { "mode": "auto", "directives": { "upgrade-insecure-requests": false, "block-all-mixed-content": false }, "reportOnly": { "upgrade-insecure-requests": false, "block-all-mixed-content": false } },
   csrf_check_origin: true,
-  track_server_fetches: false,
   embedded: false,
   env_public_prefix: "PUBLIC_",
   env_private_prefix: "",
@@ -106,7 +116,7 @@ const options = {
   root: Root,
   service_worker: false,
   templates: {
-    app: ({ head, body, assets: assets2, nonce, env }) => '<!DOCTYPE html>\r\n<html lang="en">\r\n	<head>\r\n		<meta charset="utf-8" />\r\n		<meta name="viewport" content="width=device-width, initial-scale=1" />\r\n		' + head + '\r\n	</head>\r\n	<body data-sveltekit-preload-data="hover">\r\n		<div style="display: contents">' + body + "</div>\r\n	</body>\r\n</html>\r\n",
+    app: ({ head, body, assets: assets2, nonce, env }) => '<!DOCTYPE html>\r\n<html lang="en">\r\n	<head>\r\n		<meta charset="utf-8" />\r\n		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\r\n		' + head + '\r\n	</head>\r\n	<body data-sveltekit-preload-data="hover">\r\n		<div style="display: contents">' + body + "</div>\r\n	</body>\r\n</html>\r\n",
     error: ({ status, message }) => '<!doctype html>\n<html lang="en">\n	<head>\n		<meta charset="utf-8" />\n		<title>' + message + `</title>
 
 		<style>
@@ -178,7 +188,7 @@ const options = {
 		<div class="error">
 			<span class="status">` + status + '</span>\n			<div class="message">\n				<h1>' + message + "</h1>\n			</div>\n		</div>\n	</body>\n</html>\n"
   },
-  version_hash: "bfpxld"
+  version_hash: "4qq87m"
 };
 function get_hooks() {
   return {};
@@ -186,12 +196,16 @@ function get_hooks() {
 export {
   assets as a,
   base as b,
-  set_public_env as c,
-  set_assets as d,
-  set_building as e,
+  options as c,
+  set_private_env as d,
+  building as e,
+  set_public_env as f,
   get_hooks as g,
-  options as o,
+  set_safe_public_env as h,
+  set_assets as i,
+  set_building as j,
+  override as o,
   public_env as p,
   reset as r,
-  set_private_env as s
+  safe_public_env as s
 };

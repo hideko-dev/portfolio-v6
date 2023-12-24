@@ -7,7 +7,7 @@ const Title = create_ssr_component(($$result, $$props, $$bindings, slots) => {
 });
 const pageTitle_svelte_svelte_type_style_lang = "";
 const css = {
-  code: ".title.svelte-9qwjzi{display:flex;align-items:center;font-family:'Inter', sans-serif;font-weight:700;font-size:25px;gap:4px}.titles.svelte-9qwjzi{transition:all 0.2s}",
+  code: ".title.svelte-1alequ2{display:flex;align-items:center;font-family:'Inter', sans-serif;font-weight:700;font-size:25px;gap:4px}.titles.svelte-1alequ2{transition:all 0.2s}",
   map: null
 };
 const PageTitle = create_ssr_component(($$result, $$props, $$bindings, slots) => {
@@ -18,7 +18,7 @@ const PageTitle = create_ssr_component(($$result, $$props, $$bindings, slots) =>
   if ($$props.customStyle === void 0 && $$bindings.customStyle && customStyle !== void 0)
     $$bindings.customStyle(customStyle);
   $$result.css.add(css);
-  return `<div class="title svelte-9qwjzi"${add_attribute("style", customStyle, 0)}><p class="titles svelte-9qwjzi">${escape(title)}</p> </div>`;
+  return `<div class="title svelte-1alequ2"${add_attribute("style", customStyle, 0)}><p class="titles svelte-1alequ2">${escape(title)}</p> </div>`;
 });
 export {
   PageTitle as P,
