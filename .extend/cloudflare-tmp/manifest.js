@@ -5,21 +5,19 @@ function __memo(fn) {
 }
 
 return {
-	appDir: "_app",
-	appPath: "_app",
-	assets: new Set(["icon.svg","robots.txt"]),
-	mimeTypes: {".svg":"image/svg+xml",".txt":"text/plain"},
+	appDir: "_svelte",
+	appPath: "_svelte",
+	assets: new Set(["favicon.ico"]),
+	mimeTypes: {},
 	_: {
-		client: {"start":"_app/immutable/entry/start.772c388b.js","app":"_app/immutable/entry/app.69a2ed23.js","imports":["_app/immutable/entry/start.772c388b.js","_app/immutable/chunks/scheduler.0d2f776c.js","_app/immutable/chunks/singletons.50650c4a.js","_app/immutable/entry/app.69a2ed23.js","_app/immutable/chunks/scheduler.0d2f776c.js","_app/immutable/chunks/index.e8a83480.js"],"stylesheets":[],"fonts":[]},
+		client: {"start":"_svelte/immutable/entry/start.8eec01bd.js","app":"_svelte/immutable/entry/app.9f16196d.js","imports":["_svelte/immutable/entry/start.8eec01bd.js","_svelte/immutable/chunks/scheduler.abd4628c.js","_svelte/immutable/chunks/singletons.52da4b92.js","_svelte/immutable/chunks/index.5ba2287e.js","_svelte/immutable/entry/app.9f16196d.js","_svelte/immutable/chunks/scheduler.abd4628c.js","_svelte/immutable/chunks/index.b42942e1.js"],"stylesheets":[],"fonts":[],"uses_env_dynamic_public":false},
 		nodes: [
 			__memo(() => import('../output/server/nodes/0.js')),
 			__memo(() => import('../output/server/nodes/1.js')),
 			__memo(() => import('../output/server/nodes/2.js')),
 			__memo(() => import('../output/server/nodes/3.js')),
 			__memo(() => import('../output/server/nodes/4.js')),
-			__memo(() => import('../output/server/nodes/5.js')),
-			__memo(() => import('../output/server/nodes/6.js')),
-			__memo(() => import('../output/server/nodes/7.js'))
+			__memo(() => import('../output/server/nodes/5.js'))
 		],
 		routes: [
 			{
@@ -27,7 +25,7 @@ return {
 				pattern: /^\/$/,
 				params: [],
 				page: { layouts: [0,], errors: [1,], leaf: 2 },
-				endpoint: null
+				endpoint: __memo(() => import('../output/server/entries/endpoints/_server.js'))
 			},
 			{
 				id: "/contact",
@@ -37,31 +35,17 @@ return {
 				endpoint: null
 			},
 			{
-				id: "/home",
-				pattern: /^\/home\/?$/,
+				id: "/index",
+				pattern: /^\/index\/?$/,
 				params: [],
 				page: { layouts: [0,], errors: [1,], leaf: 4 },
-				endpoint: null
-			},
-			{
-				id: "/pg",
-				pattern: /^\/pg\/?$/,
-				params: [],
-				page: { layouts: [0,], errors: [1,], leaf: 5 },
 				endpoint: null
 			},
 			{
 				id: "/works",
 				pattern: /^\/works\/?$/,
 				params: [],
-				page: { layouts: [0,], errors: [1,], leaf: 6 },
-				endpoint: null
-			},
-			{
-				id: "/works/[id]",
-				pattern: /^\/works\/([^/]+?)\/?$/,
-				params: [{"name":"id","optional":false,"rest":false,"chained":false}],
-				page: { layouts: [0,], errors: [1,], leaf: 7 },
+				page: { layouts: [0,], errors: [1,], leaf: 5 },
 				endpoint: null
 			}
 		],

@@ -10,7 +10,7 @@ return {
 	assets: new Set(["favicon.ico"]),
 	mimeTypes: {},
 	_: {
-		client: {"start":"_svelte/immutable/entry/start.00fe2080.js","app":"_svelte/immutable/entry/app.f80962a8.js","imports":["_svelte/immutable/entry/start.00fe2080.js","_svelte/immutable/chunks/scheduler.abd4628c.js","_svelte/immutable/chunks/singletons.5eb8fa98.js","_svelte/immutable/chunks/index.5ba2287e.js","_svelte/immutable/entry/app.f80962a8.js","_svelte/immutable/chunks/scheduler.abd4628c.js","_svelte/immutable/chunks/index.b42942e1.js"],"stylesheets":[],"fonts":[],"uses_env_dynamic_public":false},
+		client: {"start":"_svelte/immutable/entry/start.8eec01bd.js","app":"_svelte/immutable/entry/app.9f16196d.js","imports":["_svelte/immutable/entry/start.8eec01bd.js","_svelte/immutable/chunks/scheduler.abd4628c.js","_svelte/immutable/chunks/singletons.52da4b92.js","_svelte/immutable/chunks/index.5ba2287e.js","_svelte/immutable/entry/app.9f16196d.js","_svelte/immutable/chunks/scheduler.abd4628c.js","_svelte/immutable/chunks/index.b42942e1.js"],"stylesheets":[],"fonts":[],"uses_env_dynamic_public":false},
 		nodes: [
 			__memo(() => import('./nodes/0.js')),
 			__memo(() => import('./nodes/1.js')),

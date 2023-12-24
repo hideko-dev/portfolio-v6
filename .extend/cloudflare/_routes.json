@@ -5,8 +5,7 @@
 		"/*"
 	],
 	"exclude": [
-		"/_app/*",
-		"/icon.svg",
-		"/robots.txt"
+		"/_svelte/*",
+		"/favicon.ico"
 	]
 }

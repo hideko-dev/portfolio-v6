@@ -7,7 +7,9 @@ const config = {
 	}),
 	kit: {
 		adapter: adapter({
-			fallback: './stands/fallback.html'
+			// fallback: './stands/fallback.html',
+			include: ['/*'],
+			exclude: ['<all>']
 		}),
 		appDir: "_svelte",
 		outDir: ".extend",
