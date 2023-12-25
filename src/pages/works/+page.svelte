@@ -6,13 +6,11 @@
     import Fa from "svelte-fa";
     import { fade } from "svelte/transition";
     import PageTitle from "../../components/pageTitle.svelte";
+    import {worksData} from "$lib/stores/works.js";
     let datas = [];
-
-    onMount(async() => {
-        setTimeout(async () => {
-            const res = await cms.get({ endpoint: "works" });
-            datas = res.contents;
-        }, 500)
+    onMount(async () => {
+        const res = await cms.get({ endpoint: "works" });
+        datas = res.contents;
     })
 </script>
 
@@ -21,7 +19,7 @@
 <section>
     <div class="items">
         <PageTitle title="Works"/>
-        {#key datas}
+        {#key data}
             <div in:fade={{ duration: 200 }} out:fade={{ duration: 200 }}>
                 {#if datas.length > 0}
                     <div class="contents">
