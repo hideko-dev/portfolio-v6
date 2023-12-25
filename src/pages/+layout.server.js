@@ -1,3 +1,3 @@
-export const load = async ({ url: { pathname } }) => {
+export const load = ({ url: { pathname } }) => {
     return { pathname };
 };
