@@ -9,12 +9,10 @@
     let datas = [];
 
     onMount(async() => {
-        try {
+        setTimeout(async () => {
             const res = await cms.get({ endpoint: "works" });
             datas = res.contents;
-        } catch (error) {
-            return false
-        }
+        }, 500)
     })
 </script>
 
