@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-cloudflare';
+import adapter from '@sveltejs/adapter-vercel';
 import preprocess from 'svelte-preprocess';
 
 const config = {
@@ -6,11 +6,8 @@ const config = {
 		postcss: true,
 	}),
 	kit: {
-		paths: {
-			base: "/"
-		},
 		adapter: adapter({
-			include: ['/*'],
+			// include: ['/*'],
 		}),
 		appDir: "_svelte",
 		outDir: ".extend",
