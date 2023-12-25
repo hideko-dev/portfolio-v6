@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-vercel';
+import adapter from '@sveltejs/adapter-cloudflare';
 import preprocess from 'svelte-preprocess';
 
 const config = {
@@ -7,7 +7,8 @@ const config = {
 	}),
 	kit: {
 		adapter: adapter({
-			fallback: './stands/fallback.html'
+			include: ['/*'],
+			// fallback: './stands/fallback.html'
 		}),
 		appDir: "_svelte",
 		outDir: ".extend",

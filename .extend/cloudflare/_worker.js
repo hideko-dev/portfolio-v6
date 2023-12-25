@@ -43,6 +43,9 @@ function blank_object() {
 function run_all(fns) {
   fns.forEach(run);
 }
+function is_function(thing) {
+  return typeof thing === "function";
+}
 function safe_not_equal(a2, b2) {
   return a2 != a2 ? b2 == b2 : a2 !== b2 || a2 && typeof a2 === "object" || typeof a2 === "function";
 }
@@ -56,13 +59,21 @@ function subscribe(store, ...callbacks) {
   const unsub = store.subscribe(...callbacks);
   return unsub.unsubscribe ? () => unsub.unsubscribe() : unsub;
 }
-function set_current_component(component9) {
-  current_component = component9;
+function get_store_value(store) {
+  let value;
+  subscribe(store, (_) => value = _)();
+  return value;
+}
+function set_current_component(component7) {
+  current_component = component7;
 }
 function get_current_component() {
   if (!current_component)
     throw new Error("Function called outside component initialization");
   return current_component;
+}
+function onDestroy(fn) {
+  get_current_component().$$.on_destroy.push(fn);
 }
 function setContext(key2, context) {
   get_current_component().$$.context.set(key2, context);
@@ -73,6 +84,64 @@ function getContext(key2) {
 }
 function ensure_array_like(array_like_or_iterator) {
   return array_like_or_iterator?.length !== void 0 ? array_like_or_iterator : Array.from(array_like_or_iterator);
+}
+function spread(args, attrs_to_add) {
+  const attributes = Object.assign({}, ...args);
+  if (attrs_to_add) {
+    const classes_to_add = attrs_to_add.classes;
+    const styles_to_add = attrs_to_add.styles;
+    if (classes_to_add) {
+      if (attributes.class == null) {
+        attributes.class = classes_to_add;
+      } else {
+        attributes.class += " " + classes_to_add;
+      }
+    }
+    if (styles_to_add) {
+      if (attributes.style == null) {
+        attributes.style = style_object_to_string(styles_to_add);
+      } else {
+        attributes.style = style_object_to_string(
+          merge_ssr_styles(attributes.style, styles_to_add)
+        );
+      }
+    }
+  }
+  let str = "";
+  Object.keys(attributes).forEach((name) => {
+    if (invalid_attribute_name_character.test(name))
+      return;
+    const value = attributes[name];
+    if (value === true)
+      str += " " + name;
+    else if (boolean_attributes.has(name.toLowerCase())) {
+      if (value)
+        str += " " + name;
+    } else if (value != null) {
+      str += ` ${name}="${value}"`;
+    }
+  });
+  return str;
+}
+function merge_ssr_styles(style_attribute, style_directive) {
+  const style_object = {};
+  for (const individual_style of style_attribute.split(";")) {
+    const colon_index = individual_style.indexOf(":");
+    const name = individual_style.slice(0, colon_index).trim();
+    const value = individual_style.slice(colon_index + 1).trim();
+    if (!name)
+      continue;
+    style_object[name] = value;
+  }
+  for (const name in style_directive) {
+    const value = style_directive[name];
+    if (value) {
+      style_object[name] = value;
+    } else {
+      delete style_object[name];
+    }
+  }
+  return style_object;
 }
 function escape2(value, is_attr = false) {
   const str = String(value);
@@ -88,6 +157,17 @@ function escape2(value, is_attr = false) {
   }
   return escaped2 + str.substring(last);
 }
+function escape_attribute_value(value) {
+  const should_escape = typeof value === "string" || value && typeof value === "object";
+  return should_escape ? escape2(value, true) : value;
+}
+function escape_object(obj) {
+  const result = {};
+  for (const key2 in obj) {
+    result[key2] = escape_attribute_value(obj[key2]);
+  }
+  return result;
+}
 function each(items, fn) {
   items = ensure_array_like(items);
   let str = "";
@@ -96,15 +176,15 @@ function each(items, fn) {
   }
   return str;
 }
-function validate_component(component9, name) {
-  if (!component9 || !component9.$$render) {
+function validate_component(component7, name) {
+  if (!component7 || !component7.$$render) {
     if (name === "svelte:component")
       name += " this={...}";
     throw new Error(
       `<${name}> is not a valid SSR component. You may need to review your build config to ensure that dependencies are compiled, rather than imported as pre-compiled modules. Otherwise you may need to fix a <${name}>.`
     );
   }
-  return component9;
+  return component7;
 }
 function create_ssr_component(fn) {
   function $$render(result, props, bindings, slots, context) {
@@ -148,9 +228,46 @@ function add_attribute(name, value, boolean) {
   const assignment = boolean && value === true ? "" : `="${escape2(value, true)}"`;
   return ` ${name}${assignment}`;
 }
-var current_component, ATTR_REGEX, CONTENT_REGEX, missing_component, on_destroy;
+function style_object_to_string(style_object) {
+  return Object.keys(style_object).filter((key2) => style_object[key2]).map((key2) => `${key2}: ${escape_attribute_value(style_object[key2])};`).join(" ");
+}
+function add_styles(style_object) {
+  const styles = style_object_to_string(style_object);
+  return styles ? ` style="${styles}"` : "";
+}
+var current_component, _boolean_attributes, boolean_attributes, invalid_attribute_name_character, ATTR_REGEX, CONTENT_REGEX, missing_component, on_destroy;
 var init_ssr = __esm({
   ".extend/output/server/chunks/ssr.js"() {
+    _boolean_attributes = /** @type {const} */
+    [
+      "allowfullscreen",
+      "allowpaymentrequest",
+      "async",
+      "autofocus",
+      "autoplay",
+      "checked",
+      "controls",
+      "default",
+      "defer",
+      "disabled",
+      "formnovalidate",
+      "hidden",
+      "inert",
+      "ismap",
+      "loop",
+      "multiple",
+      "muted",
+      "nomodule",
+      "novalidate",
+      "open",
+      "playsinline",
+      "readonly",
+      "required",
+      "reversed",
+      "selected"
+    ];
+    boolean_attributes = /* @__PURE__ */ new Set([..._boolean_attributes]);
+    invalid_attribute_name_character = /[\s'">/=\u{FDD0}-\u{FDEF}\u{FFFE}\u{FFFF}\u{1FFFE}\u{1FFFF}\u{2FFFE}\u{2FFFF}\u{3FFFE}\u{3FFFF}\u{4FFFE}\u{4FFFF}\u{5FFFE}\u{5FFFF}\u{6FFFE}\u{6FFFF}\u{7FFFE}\u{7FFFF}\u{8FFFE}\u{8FFFF}\u{9FFFE}\u{9FFFF}\u{AFFFE}\u{AFFFF}\u{BFFFE}\u{BFFFF}\u{CFFFE}\u{CFFFF}\u{DFFFE}\u{DFFFF}\u{EFFFE}\u{EFFFF}\u{FFFFE}\u{FFFFF}\u{10FFFE}\u{10FFFF}]/u;
     ATTR_REGEX = /[&"]/g;
     CONTENT_REGEX = /[&<]/g;
     missing_component = {
@@ -186,14 +303,14 @@ function writable(value, start = noop) {
       }
     }
   }
-  function update(fn) {
+  function update2(fn) {
     set(fn(value));
   }
   function subscribe2(run2, invalidate = noop) {
     const subscriber = [run2, invalidate];
     subscribers.add(subscriber);
     if (subscribers.size === 1) {
-      stop = start(set, update) || noop;
+      stop = start(set, update2) || noop;
     }
     run2(value);
     return () => {
@@ -204,7 +321,55 @@ function writable(value, start = noop) {
       }
     };
   }
-  return { set, update, subscribe: subscribe2 };
+  return { set, update: update2, subscribe: subscribe2 };
+}
+function derived(stores, fn, initial_value) {
+  const single = !Array.isArray(stores);
+  const stores_array = single ? [stores] : stores;
+  if (!stores_array.every(Boolean)) {
+    throw new Error("derived() expects stores as input, got a falsy value");
+  }
+  const auto = fn.length < 2;
+  return readable(initial_value, (set, update2) => {
+    let started = false;
+    const values = [];
+    let pending = 0;
+    let cleanup = noop;
+    const sync = () => {
+      if (pending) {
+        return;
+      }
+      cleanup();
+      const result = fn(single ? values[0] : values, set, update2);
+      if (auto) {
+        set(result);
+      } else {
+        cleanup = is_function(result) ? result : noop;
+      }
+    };
+    const unsubscribers = stores_array.map(
+      (store, i2) => subscribe(
+        store,
+        (value) => {
+          values[i2] = value;
+          pending &= ~(1 << i2);
+          if (started) {
+            sync();
+          }
+        },
+        () => {
+          pending |= 1 << i2;
+        }
+      )
+    );
+    started = true;
+    sync();
+    return function stop() {
+      run_all(unsubscribers);
+      cleanup();
+      started = false;
+    };
+  });
 }
 var subscriber_queue;
 var init_chunks = __esm({
@@ -229,20 +394,20 @@ var require_cookie = __commonJS({
       var obj = {};
       var opt = options2 || {};
       var dec = opt.decode || decode;
-      var index9 = 0;
-      while (index9 < str.length) {
-        var eqIdx = str.indexOf("=", index9);
+      var index7 = 0;
+      while (index7 < str.length) {
+        var eqIdx = str.indexOf("=", index7);
         if (eqIdx === -1) {
           break;
         }
-        var endIdx = str.indexOf(";", index9);
+        var endIdx = str.indexOf(";", index7);
         if (endIdx === -1) {
           endIdx = str.length;
         } else if (endIdx < eqIdx) {
-          index9 = str.lastIndexOf(";", eqIdx - 1) + 1;
+          index7 = str.lastIndexOf(";", eqIdx - 1) + 1;
           continue;
         }
-        var key2 = str.slice(index9, eqIdx).trim();
+        var key2 = str.slice(index7, eqIdx).trim();
         if (void 0 === obj[key2]) {
           var val = str.slice(eqIdx + 1, endIdx).trim();
           if (val.charCodeAt(0) === 34) {
@@ -250,7 +415,7 @@ var require_cookie = __commonJS({
           }
           obj[key2] = tryDecode(val, dec);
         }
-        index9 = endIdx + 1;
+        index7 = endIdx + 1;
       }
       return obj;
     }
@@ -550,20 +715,10 @@ var init_layout_server = __esm({
   }
 });
 
-// node_modules/@fortawesome/free-brands-svg-icons/index.mjs
-var faDiscord, faLinkedin, faInstagram, faGithub;
+// node_modules/.pnpm/@fortawesome+free-brands-svg-icons@6.5.1/node_modules/@fortawesome/free-brands-svg-icons/index.mjs
+var faInstagram, faGithub;
 var init_free_brands_svg_icons = __esm({
-  "node_modules/@fortawesome/free-brands-svg-icons/index.mjs"() {
-    faDiscord = {
-      prefix: "fab",
-      iconName: "discord",
-      icon: [640, 512, [], "f392", "M524.531,69.836a1.5,1.5,0,0,0-.764-.7A485.065,485.065,0,0,0,404.081,32.03a1.816,1.816,0,0,0-1.923.91,337.461,337.461,0,0,0-14.9,30.6,447.848,447.848,0,0,0-134.426,0,309.541,309.541,0,0,0-15.135-30.6,1.89,1.89,0,0,0-1.924-.91A483.689,483.689,0,0,0,116.085,69.137a1.712,1.712,0,0,0-.788.676C39.068,183.651,18.186,294.69,28.43,404.354a2.016,2.016,0,0,0,.765,1.375A487.666,487.666,0,0,0,176.02,479.918a1.9,1.9,0,0,0,2.063-.676A348.2,348.2,0,0,0,208.12,430.4a1.86,1.86,0,0,0-1.019-2.588,321.173,321.173,0,0,1-45.868-21.853,1.885,1.885,0,0,1-.185-3.126c3.082-2.309,6.166-4.711,9.109-7.137a1.819,1.819,0,0,1,1.9-.256c96.229,43.917,200.41,43.917,295.5,0a1.812,1.812,0,0,1,1.924.233c2.944,2.426,6.027,4.851,9.132,7.16a1.884,1.884,0,0,1-.162,3.126,301.407,301.407,0,0,1-45.89,21.83,1.875,1.875,0,0,0-1,2.611,391.055,391.055,0,0,0,30.014,48.815,1.864,1.864,0,0,0,2.063.7A486.048,486.048,0,0,0,610.7,405.729a1.882,1.882,0,0,0,.765-1.352C623.729,277.594,590.933,167.465,524.531,69.836ZM222.491,337.58c-28.972,0-52.844-26.587-52.844-59.239S193.056,219.1,222.491,219.1c29.665,0,53.306,26.82,52.843,59.239C275.334,310.993,251.924,337.58,222.491,337.58Zm195.38,0c-28.971,0-52.843-26.587-52.843-59.239S388.437,219.1,417.871,219.1c29.667,0,53.307,26.82,52.844,59.239C470.715,310.993,447.538,337.58,417.871,337.58Z"]
-    };
-    faLinkedin = {
-      prefix: "fab",
-      iconName: "linkedin",
-      icon: [448, 512, [], "f08c", "M416 32H31.9C14.3 32 0 46.5 0 64.3v383.4C0 465.5 14.3 480 31.9 480H416c17.6 0 32-14.5 32-32.3V64.3c0-17.8-14.4-32.3-32-32.3zM135.4 416H69V202.2h66.5V416zm-33.2-243c-21.3 0-38.5-17.3-38.5-38.5S80.9 96 102.2 96c21.2 0 38.5 17.3 38.5 38.5 0 21.3-17.2 38.5-38.5 38.5zm282.1 243h-66.4V312c0-24.8-.5-56.7-34.5-56.7-34.6 0-39.9 27-39.9 54.9V416h-66.4V202.2h63.7v29.2h.9c8.9-16.8 30.6-34.5 62.9-34.5 67.2 0 79.7 44.3 79.7 101.9V416z"]
-    };
+  "node_modules/.pnpm/@fortawesome+free-brands-svg-icons@6.5.1/node_modules/@fortawesome/free-brands-svg-icons/index.mjs"() {
     faInstagram = {
       prefix: "fab",
       iconName: "instagram",
@@ -577,46 +732,7 @@ var init_free_brands_svg_icons = __esm({
   }
 });
 
-// node_modules/@fortawesome/free-solid-svg-icons/index.mjs
-var faSun, faMoon;
-var init_free_solid_svg_icons = __esm({
-  "node_modules/@fortawesome/free-solid-svg-icons/index.mjs"() {
-    faSun = {
-      prefix: "fas",
-      iconName: "sun",
-      icon: [512, 512, [9728], "f185", "M361.5 1.2c5 2.1 8.6 6.6 9.6 11.9L391 121l107.9 19.8c5.3 1 9.8 4.6 11.9 9.6s1.5 10.7-1.6 15.2L446.9 256l62.3 90.3c3.1 4.5 3.7 10.2 1.6 15.2s-6.6 8.6-11.9 9.6L391 391 371.1 498.9c-1 5.3-4.6 9.8-9.6 11.9s-10.7 1.5-15.2-1.6L256 446.9l-90.3 62.3c-4.5 3.1-10.2 3.7-15.2 1.6s-8.6-6.6-9.6-11.9L121 391 13.1 371.1c-5.3-1-9.8-4.6-11.9-9.6s-1.5-10.7 1.6-15.2L65.1 256 2.8 165.7c-3.1-4.5-3.7-10.2-1.6-15.2s6.6-8.6 11.9-9.6L121 121 140.9 13.1c1-5.3 4.6-9.8 9.6-11.9s10.7-1.5 15.2 1.6L256 65.1 346.3 2.8c4.5-3.1 10.2-3.7 15.2-1.6zM160 256a96 96 0 1 1 192 0 96 96 0 1 1 -192 0zm224 0a128 128 0 1 0 -256 0 128 128 0 1 0 256 0z"]
-    };
-    faMoon = {
-      prefix: "fas",
-      iconName: "moon",
-      icon: [384, 512, [127769, 9214], "f186", "M223.5 32C100 32 0 132.3 0 256S100 480 223.5 480c60.6 0 115.5-24.2 155.8-63.4c5-4.9 6.3-12.5 3.1-18.7s-10.1-9.7-17-8.5c-9.8 1.7-19.8 2.6-30.1 2.6c-96.9 0-175.5-78.8-175.5-176c0-65.8 36-123.1 89.3-153.3c6.1-3.5 9.2-10.5 7.7-17.3s-7.3-11.9-14.3-12.5c-6.3-.5-12.6-.8-19-.8z"]
-    };
-  }
-});
-
-// .extend/output/server/entries/pages/_layout.svelte.js
-var layout_svelte_exports = {};
-__export(layout_svelte_exports, {
-  default: () => Layout
-});
-function client_method(key2) {
-  {
-    if (key2 === "before_navigate" || key2 === "after_navigate" || key2 === "on_navigate") {
-      return () => {
-      };
-    } else {
-      const name_lookup = {
-        disable_scroll_handling: "disableScrollHandling",
-        preload_data: "preloadData",
-        preload_code: "preloadCode",
-        invalidate_all: "invalidateAll"
-      };
-      return () => {
-        throw new Error(`Cannot call ${name_lookup[key2] ?? key2}(...) on the server`);
-      };
-    }
-  }
-}
+// .extend/output/server/chunks/fa.js
 function joinCss(obj, separator = ";") {
   let texts;
   if (Array.isArray(obj)) {
@@ -631,7 +747,7 @@ function joinCss(obj, separator = ";") {
   }
   return texts.join(separator);
 }
-function getStyles(style, size, pull, fw) {
+function getStyles(style, size2, pull, fw) {
   let float;
   let width;
   const height = "1em";
@@ -647,17 +763,17 @@ function getStyles(style, size, pull, fw) {
   if (pull) {
     float = pull;
   }
-  if (size) {
-    if (size == "lg") {
+  if (size2) {
+    if (size2 == "lg") {
       fontSize = "1.33333em";
       lineHeight = ".75em";
       verticalAlign = "-.225em";
-    } else if (size == "xs") {
+    } else if (size2 == "xs") {
       fontSize = ".75em";
-    } else if (size == "sm") {
+    } else if (size2 == "sm") {
       fontSize = ".875em";
     } else {
-      fontSize = size.replace("x", "em");
+      fontSize = size2.replace("x", "em");
     }
   }
   return joinCss([
@@ -696,46 +812,13 @@ function getTransform(scale, translateX, translateY, rotate, flip, translateTime
     " "
   );
 }
-function applyTheme() {
-  console.log("Aa");
-}
-var onNavigate, css$7, Navigator, parseNumber, css$6, Fa, css$5, Eternals, initialTheme, theme, css$4, Theme, css$3, Header, css$2, Footer, Fonts, Transition, css$1, Loader, css, Layout;
-var init_layout_svelte = __esm({
-  ".extend/output/server/entries/pages/_layout.svelte.js"() {
+var parseNumber, css, Fa, Fa$1;
+var init_fa = __esm({
+  ".extend/output/server/chunks/fa.js"() {
     init_ssr();
-    init_free_brands_svg_icons();
-    init_free_solid_svg_icons();
-    init_chunks();
-    onNavigate = /* @__PURE__ */ client_method("on_navigate");
-    css$7 = {
-      code: "main.svelte-shf47b{display:flex;align-items:center;justify-content:center;padding-inline:4px;padding-block:4px;border-radius:8px;font-family:'Inter', sans-serif;position:relative;z-index:1}.box.svelte-shf47b{position:absolute;background:var(--border);height:1.5rem;border-radius:5px;z-index:2;transition:all 0.3s\r\n    }.item.svelte-shf47b{text-decoration:none;border-radius:5px;padding-inline:9px;padding-block:3px;font-size:14px;z-index:3;transition:all 0.3s;color:var(--text-thin);font-weight:400;user-select:none}.item.svelte-shf47b:hover{color:#b0b0b0}",
-      map: null
-    };
-    Navigator = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      let selected = -1;
-      let styles = "opacity: 0";
-      const items = [{ title: "Works", link: "/works" }, { title: "Contact", link: "/contact" }];
-      onNavigate((callback) => {
-        const id = callback.to.route.id;
-        if (id === "/") {
-          styles = "opacity: 0";
-          selected = -1;
-        } else if (id === "/works") {
-          styles = "left: 4px; width: 3.7rem";
-          selected = 0;
-        } else if (id === "/contact") {
-          styles = "left: 64px; width: 4.3rem";
-          selected = 1;
-        }
-      });
-      $$result.css.add(css$7);
-      return `<main class="svelte-shf47b"><div class="box svelte-shf47b"${add_attribute("style", styles, 0)}></div> ${each(items, (c3, index22) => {
-        return `<a${add_attribute("href", c3.link, 0)} class="item svelte-shf47b"${add_attribute("style", `color: ${selected === index22 ? "var(--subtle)" : null}`, 0)}>${escape2(c3.title)}</a>`;
-      })} </main>`;
-    });
     parseNumber = parseFloat;
-    css$6 = {
-      code: ".spin.svelte-1cj2gr0{animation:svelte-1cj2gr0-spin 2s 0s infinite linear}.pulse.svelte-1cj2gr0{animation:svelte-1cj2gr0-spin 1s infinite steps(8)}@keyframes svelte-1cj2gr0-spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}",
+    css = {
+      code: ".spin.svelte-1w3t65e{-webkit-animation:svelte-1w3t65e-spin 2s 0s infinite linear;animation:svelte-1w3t65e-spin 2s 0s infinite linear}.pulse.svelte-1w3t65e{-webkit-animation:svelte-1w3t65e-spin 1s infinite steps(8);animation:svelte-1w3t65e-spin 1s infinite steps(8)}@-webkit-keyframes svelte-1w3t65e-spin{0%{-webkit-transform:rotate(0deg);transform:rotate(0deg)}100%{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}@keyframes svelte-1w3t65e-spin{0%{-webkit-transform:rotate(0deg);transform:rotate(0deg)}100%{-webkit-transform:rotate(360deg);transform:rotate(360deg)}}",
       map: null
     };
     Fa = create_ssr_component(($$result, $$props, $$bindings, slots) => {
@@ -743,7 +826,7 @@ var init_layout_svelte = __esm({
       let { id = "" } = $$props;
       let { style = "" } = $$props;
       let { icon } = $$props;
-      let { size = "" } = $$props;
+      let { size: size2 = "" } = $$props;
       let { color = "" } = $$props;
       let { fw = false } = $$props;
       let { pull = "" } = $$props;
@@ -770,8 +853,8 @@ var init_layout_svelte = __esm({
         $$bindings.style(style);
       if ($$props.icon === void 0 && $$bindings.icon && icon !== void 0)
         $$bindings.icon(icon);
-      if ($$props.size === void 0 && $$bindings.size && size !== void 0)
-        $$bindings.size(size);
+      if ($$props.size === void 0 && $$bindings.size && size2 !== void 0)
+        $$bindings.size(size2);
       if ($$props.color === void 0 && $$bindings.color && color !== void 0)
         $$bindings.color(color);
       if ($$props.fw === void 0 && $$bindings.fw && fw !== void 0)
@@ -802,121 +885,658 @@ var init_layout_svelte = __esm({
         $$bindings.secondaryOpacity(secondaryOpacity);
       if ($$props.swapOpacity === void 0 && $$bindings.swapOpacity && swapOpacity !== void 0)
         $$bindings.swapOpacity(swapOpacity);
-      $$result.css.add(css$6);
+      $$result.css.add(css);
       i2 = icon && icon.icon || [0, 0, "", [], ""];
-      s4 = getStyles(style, size, pull, fw);
+      s4 = getStyles(style, size2, pull, fw);
       transform = getTransform(scale, translateX, translateY, rotate, flip, 512);
       return `${i2[4] ? `<svg${add_attribute("id", id || void 0, 0)} class="${[
-        "svelte-fa " + escape2(clazz, true) + " svelte-1cj2gr0",
+        "svelte-fa " + escape2(clazz, true) + " svelte-1w3t65e",
         (pulse ? "pulse" : "") + " " + (spin ? "spin" : "")
       ].join(" ").trim()}"${add_attribute("style", s4, 0)} viewBox="${"0 0 " + escape2(i2[0], true) + " " + escape2(i2[1], true)}" aria-hidden="true" role="img" xmlns="http://www.w3.org/2000/svg"><g transform="${"translate(" + escape2(i2[0] / 2, true) + " " + escape2(i2[1] / 2, true) + ")"}" transform-origin="${escape2(i2[0] / 4, true) + " 0"}"><g${add_attribute("transform", transform, 0)}>${typeof i2[4] == "string" ? `<path${add_attribute("d", i2[4], 0)}${add_attribute("fill", color || primaryColor || "currentColor", 0)} transform="${"translate(" + escape2(i2[0] / -2, true) + " " + escape2(i2[1] / -2, true) + ")"}"></path>` : ` <path${add_attribute("d", i2[4][0], 0)}${add_attribute("fill", secondaryColor || color || "currentColor", 0)}${add_attribute("fill-opacity", swapOpacity != false ? primaryOpacity : secondaryOpacity, 0)} transform="${"translate(" + escape2(i2[0] / -2, true) + " " + escape2(i2[1] / -2, true) + ")"}"></path> <path${add_attribute("d", i2[4][1], 0)}${add_attribute("fill", primaryColor || color || "currentColor", 0)}${add_attribute("fill-opacity", swapOpacity != false ? secondaryOpacity : primaryOpacity, 0)} transform="${"translate(" + escape2(i2[0] / -2, true) + " " + escape2(i2[1] / -2, true) + ")"}"></path>`}</g></g></svg>` : ``}`;
     });
-    css$5 = {
-      code: "main.svelte-3822zl{display:flex;align-items:center;justify-content:center;padding-inline:4px;padding-block:4px;border-radius:8px;font-family:'Inter', sans-serif;position:relative;z-index:1}.box.svelte-3822zl{position:absolute;background:var(--border);height:1.5rem;border-radius:5px;z-index:2;transition:all 0.2s}.item.svelte-3822zl{text-decoration:none;border-radius:5px;padding-inline:9px;padding-block:2px;font-size:16px;z-index:3;transition:all 0.2s;color:var(--text-thin);font-weight:400;user-select:none}.item.svelte-3822zl:hover{color:var(--subtle)}",
-      map: null
-    };
-    Eternals = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      let boxStyle = "opacity: 0; width: 2.15rem";
-      const links = [
-        {
-          icon: faGithub,
-          link: "https://github.com/Hideko-Dev"
-        },
-        {
-          icon: faInstagram,
-          link: "https://github.com/Hideko-Dev"
-        },
-        {
-          icon: faDiscord,
-          link: "https://github.com/Hideko-Dev"
-        },
-        {
-          icon: faLinkedin,
-          link: "https://github.com/Hideko-Dev"
-        }
-      ];
-      $$result.css.add(css$5);
-      return `<main class="svelte-3822zl"><div class="box svelte-3822zl"${add_attribute("style", boxStyle, 0)}></div> ${each(links, (l2, index22) => {
-        return `<a class="item svelte-3822zl"${add_attribute("href", l2.link, 0)}>${validate_component(Fa, "Fa").$$render($$result, { icon: l2.icon }, {}, {})} </a>`;
-      })} </main>`;
+    Fa$1 = Fa;
+  }
+});
+
+// .extend/output/server/chunks/Toaster.svelte_svelte_type_style_lang.js
+function writableDerived(origins, derive, reflect, initial2) {
+  var childDerivedSetter, originValues, blockNextDerive = false;
+  var reflectOldValues = reflect.length >= 2;
+  var wrappedDerive = (got, set, update3) => {
+    childDerivedSetter = set;
+    if (reflectOldValues) {
+      originValues = got;
+    }
+    if (!blockNextDerive) {
+      let returned = derive(got, set, update3);
+      if (derive.length < 2) {
+        set(returned);
+      } else {
+        return returned;
+      }
+    }
+    blockNextDerive = false;
+  };
+  var childDerived = derived(origins, wrappedDerive, initial2);
+  var singleOrigin = !Array.isArray(origins);
+  function doReflect(reflecting) {
+    var setWith = reflect(reflecting, originValues);
+    if (singleOrigin) {
+      blockNextDerive = true;
+      origins.set(setWith);
+    } else {
+      setWith.forEach((value, i2) => {
+        blockNextDerive = true;
+        origins[i2].set(value);
+      });
+    }
+    blockNextDerive = false;
+  }
+  var tryingSet = false;
+  function update2(fn) {
+    var isUpdated, mutatedBySubscriptions, oldValue, newValue;
+    if (tryingSet) {
+      newValue = fn(get_store_value(childDerived));
+      childDerivedSetter(newValue);
+      return;
+    }
+    var unsubscribe = childDerived.subscribe((value) => {
+      if (!tryingSet) {
+        oldValue = value;
+      } else if (!isUpdated) {
+        isUpdated = true;
+      } else {
+        mutatedBySubscriptions = true;
+      }
     });
-    initialTheme = "dark";
-    theme = writable(initialTheme);
-    applyTheme();
-    css$4 = {
-      code: "main.svelte-168zpbl{display:flex;align-items:center;justify-content:center;padding-inline:10px;padding-block:8px;border-radius:8px;font-family:'Inter', sans-serif;position:relative;z-index:1;transition:all 0.3s;cursor:pointer;color:var(--text-thin)\r\n    }main.svelte-168zpbl:hover{color:#b0b0b0}",
-      map: null
+    newValue = fn(oldValue);
+    tryingSet = true;
+    childDerivedSetter(newValue);
+    unsubscribe();
+    tryingSet = false;
+    if (mutatedBySubscriptions) {
+      newValue = get_store_value(childDerived);
+    }
+    if (isUpdated) {
+      doReflect(newValue);
+    }
+  }
+  return {
+    subscribe: childDerived.subscribe,
+    set(value) {
+      update2(() => value);
+    },
+    update: update2
+  };
+}
+function update(toast2) {
+  if (toast2.id) {
+    clearFromRemoveQueue(toast2.id);
+  }
+  toasts.update(($toasts) => $toasts.map((t3) => t3.id === toast2.id ? { ...t3, ...toast2 } : t3));
+}
+function add(toast2) {
+  toasts.update(($toasts) => [toast2, ...$toasts].slice(0, TOAST_LIMIT));
+}
+function upsert(toast2) {
+  if (get_store_value(toasts).find((t3) => t3.id === toast2.id)) {
+    update(toast2);
+  } else {
+    add(toast2);
+  }
+}
+function dismiss(toastId) {
+  toasts.update(($toasts) => {
+    if (toastId) {
+      addToRemoveQueue(toastId);
+    } else {
+      $toasts.forEach((toast2) => {
+        addToRemoveQueue(toast2.id);
+      });
+    }
+    return $toasts.map((t3) => t3.id === toastId || toastId === void 0 ? { ...t3, visible: false } : t3);
+  });
+}
+function remove(toastId) {
+  toasts.update(($toasts) => {
+    if (toastId === void 0) {
+      return [];
+    }
+    return $toasts.filter((t3) => t3.id !== toastId);
+  });
+}
+function startPause(time) {
+  pausedAt.set(time);
+}
+function endPause(time) {
+  let diff;
+  pausedAt.update(($pausedAt) => {
+    diff = time - ($pausedAt || 0);
+    return null;
+  });
+  toasts.update(($toasts) => $toasts.map((t3) => ({
+    ...t3,
+    pauseDuration: t3.pauseDuration + diff
+  })));
+}
+function useToasterStore(toastOptions = {}) {
+  const mergedToasts = writableDerived(toasts, ($toasts) => $toasts.map((t3) => ({
+    ...toastOptions,
+    ...toastOptions[t3.type],
+    ...t3,
+    duration: t3.duration || toastOptions[t3.type]?.duration || toastOptions?.duration || defaultTimeouts[t3.type],
+    style: [toastOptions.style, toastOptions[t3.type]?.style, t3.style].join(";")
+  })), ($toasts) => $toasts);
+  return {
+    toasts: mergedToasts,
+    pausedAt
+  };
+}
+var TOAST_LIMIT, toasts, pausedAt, toastTimeouts, addToRemoveQueue, clearFromRemoveQueue, defaultTimeouts, isFunction, resolveValue, genId, prefersReducedMotion, createToast, createHandler, toast;
+var init_Toaster_svelte_svelte_type_style_lang = __esm({
+  ".extend/output/server/chunks/Toaster.svelte_svelte_type_style_lang.js"() {
+    init_chunks();
+    init_ssr();
+    TOAST_LIMIT = 20;
+    toasts = writable([]);
+    pausedAt = writable(null);
+    toastTimeouts = /* @__PURE__ */ new Map();
+    addToRemoveQueue = (toastId) => {
+      if (toastTimeouts.has(toastId)) {
+        return;
+      }
+      const timeout = setTimeout(() => {
+        toastTimeouts.delete(toastId);
+        remove(toastId);
+      }, 1e3);
+      toastTimeouts.set(toastId, timeout);
     };
-    Theme = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+    clearFromRemoveQueue = (toastId) => {
+      const timeout = toastTimeouts.get(toastId);
+      if (timeout) {
+        clearTimeout(timeout);
+      }
+    };
+    defaultTimeouts = {
+      blank: 4e3,
+      error: 4e3,
+      success: 2e3,
+      loading: Infinity,
+      custom: 4e3
+    };
+    isFunction = (valOrFunction) => typeof valOrFunction === "function";
+    resolveValue = (valOrFunction, arg) => isFunction(valOrFunction) ? valOrFunction(arg) : valOrFunction;
+    genId = /* @__PURE__ */ (() => {
+      let count = 0;
+      return () => {
+        count += 1;
+        return count.toString();
+      };
+    })();
+    prefersReducedMotion = /* @__PURE__ */ (() => {
+      let shouldReduceMotion;
+      return () => {
+        if (shouldReduceMotion === void 0 && typeof window !== "undefined") {
+          const mediaQuery = matchMedia("(prefers-reduced-motion: reduce)");
+          shouldReduceMotion = !mediaQuery || mediaQuery.matches;
+        }
+        return shouldReduceMotion;
+      };
+    })();
+    createToast = (message, type = "blank", opts) => ({
+      createdAt: Date.now(),
+      visible: true,
+      type,
+      ariaProps: {
+        role: "status",
+        "aria-live": "polite"
+      },
+      message,
+      pauseDuration: 0,
+      ...opts,
+      id: opts?.id || genId()
+    });
+    createHandler = (type) => (message, options2) => {
+      const toast2 = createToast(message, type, options2);
+      upsert(toast2);
+      return toast2.id;
+    };
+    toast = (message, opts) => createHandler("blank")(message, opts);
+    toast.error = createHandler("error");
+    toast.success = createHandler("success");
+    toast.loading = createHandler("loading");
+    toast.custom = createHandler("custom");
+    toast.dismiss = (toastId) => {
+      dismiss(toastId);
+    };
+    toast.remove = (toastId) => remove(toastId);
+    toast.promise = (promise, msgs, opts) => {
+      const id = toast.loading(msgs.loading, { ...opts, ...opts?.loading });
+      promise.then((p2) => {
+        toast.success(resolveValue(msgs.success, p2), {
+          id,
+          ...opts,
+          ...opts?.success
+        });
+        return p2;
+      }).catch((e3) => {
+        toast.error(resolveValue(msgs.error, e3), {
+          id,
+          ...opts,
+          ...opts?.error
+        });
+      });
+      return promise;
+    };
+  }
+});
+
+// .extend/output/server/entries/pages/_layout.svelte.js
+var layout_svelte_exports = {};
+__export(layout_svelte_exports, {
+  default: () => Layout
+});
+function client_method(key2) {
+  {
+    if (key2 === "before_navigate" || key2 === "after_navigate" || key2 === "on_navigate" || key2 === "push_state" || key2 === "replace_state") {
+      return () => {
+      };
+    } else {
+      const name_lookup = {
+        disable_scroll_handling: "disableScrollHandling",
+        preload_data: "preloadData",
+        preload_code: "preloadCode",
+        invalidate_all: "invalidateAll"
+      };
+      return () => {
+        throw new Error(`Cannot call ${name_lookup[key2] ?? key2}(...) on the server`);
+      };
+    }
+  }
+}
+function calculateOffset(toast2, $toasts, opts) {
+  const { reverseOrder, gutter = 8, defaultPosition } = opts || {};
+  const relevantToasts = $toasts.filter((t3) => (t3.position || defaultPosition) === (toast2.position || defaultPosition) && t3.height);
+  const toastIndex = relevantToasts.findIndex((t3) => t3.id === toast2.id);
+  const toastsBefore = relevantToasts.filter((toast3, i2) => i2 < toastIndex && toast3.visible).length;
+  const offset = relevantToasts.filter((t3) => t3.visible).slice(...reverseOrder ? [toastsBefore + 1] : [0, toastsBefore]).reduce((acc, t3) => acc + (t3.height || 0) + gutter, 0);
+  return offset;
+}
+function useToaster(toastOptions) {
+  const { toasts: toasts2, pausedAt: pausedAt2 } = useToasterStore(toastOptions);
+  const timeouts = /* @__PURE__ */ new Map();
+  let _pausedAt;
+  const unsubscribes = [
+    pausedAt2.subscribe(($pausedAt) => {
+      if ($pausedAt) {
+        for (const [, timeoutId] of timeouts) {
+          clearTimeout(timeoutId);
+        }
+        timeouts.clear();
+      }
+      _pausedAt = $pausedAt;
+    }),
+    toasts2.subscribe(($toasts) => {
+      if (_pausedAt) {
+        return;
+      }
+      const now = Date.now();
+      for (const t3 of $toasts) {
+        if (timeouts.has(t3.id)) {
+          continue;
+        }
+        if (t3.duration === Infinity) {
+          continue;
+        }
+        const durationLeft = (t3.duration || 0) + t3.pauseDuration - (now - t3.createdAt);
+        if (durationLeft < 0) {
+          if (t3.visible) {
+            toast.dismiss(t3.id);
+          }
+          return null;
+        }
+        timeouts.set(t3.id, setTimeout(() => toast.dismiss(t3.id), durationLeft));
+      }
+    })
+  ];
+  onDestroy(() => {
+    for (const unsubscribe of unsubscribes) {
+      unsubscribe();
+    }
+  });
+  return { toasts: toasts2, handlers };
+}
+var theme, themeMenu, size, ThemeIcon, css$b, ThemeMenu, onNavigate, css$a, worksStyle, contactStyle, navStyle, HeaderNav, css$9, Header, css$8, Footer, PageTransition, handlers, css$7, CheckmarkIcon, css$6, ErrorIcon, css$5, LoaderIcon, css$4, ToastIcon, css$3, ToastMessage, css$2, ToastBar, css$1, ToastWrapper, css2, Toaster, Layout;
+var init_layout_svelte = __esm({
+  ".extend/output/server/entries/pages/_layout.svelte.js"() {
+    init_ssr();
+    init_chunks();
+    init_free_brands_svg_icons();
+    init_fa();
+    init_Toaster_svelte_svelte_type_style_lang();
+    theme = writable("system");
+    themeMenu = writable(false);
+    size = 17;
+    ThemeIcon = create_ssr_component(($$result, $$props, $$bindings, slots) => {
       let $theme, $$unsubscribe_theme;
       $$unsubscribe_theme = subscribe(theme, (value) => $theme = value);
-      $$result.css.add(css$4);
+      let { mode } = $$props;
+      const dark = `<svg xmlns="http://www.w3.org/2000/svg" width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100"><path d="M12 3a6.364 6.364 0 0 0 9 9 9 9 0 1 1-9-9Z"></path></svg>`;
+      const light = `<svg xmlns="http://www.w3.org/2000/svg" width=${size} height=${size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="m4.93 4.93 1.41 1.41"></path><path d="m17.66 17.66 1.41 1.41"></path><path d="M2 12h2"></path><path d="M20 12h2"></path><path d="m6.34 17.66-1.41 1.41"></path><path d="m19.07 4.93-1.41 1.41"></path></svg>`;
+      const system = `<svg fill="none" height=${size} shape-rendering="geometricPrecision" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" viewBox="0 0 24 24" width="24" style="color: currentcolor; width: 16px; height: 16px;"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect><path d="M8 21h8"></path><path d="M12 17v4"></path></svg>`;
+      if ($$props.mode === void 0 && $$bindings.mode && mode !== void 0)
+        $$bindings.mode(mode);
       $$unsubscribe_theme();
-      return `<main class="svelte-168zpbl">${$theme === "dark" ? `${validate_component(Fa, "Fa").$$render($$result, { icon: faSun }, {}, {})}` : `${$theme === "light" ? `${validate_component(Fa, "Fa").$$render($$result, { icon: faMoon }, {}, {})}` : ``}`} </main>`;
+      return `${mode === void 0 ? `${$theme === "dark" ? `<!-- HTML_TAG_START -->${dark}<!-- HTML_TAG_END -->` : `${$theme === "light" ? `<!-- HTML_TAG_START -->${light}<!-- HTML_TAG_END -->` : ``}`}` : `${mode === "dark" ? `<!-- HTML_TAG_START -->${dark}<!-- HTML_TAG_END -->` : `${mode === "light" ? `<!-- HTML_TAG_START -->${light}<!-- HTML_TAG_END -->` : `${mode === "system" ? `<!-- HTML_TAG_START -->${system}<!-- HTML_TAG_END -->` : ``}`}`}`}`;
     });
-    css$3 = {
-      code: ".line.svelte-3jbat2.svelte-3jbat2{width:1px;height:18px;background:var(--thin)}.contents.svelte-3jbat2.svelte-3jbat2{display:flex;align-items:center;justify-content:center;padding-inline:4px;padding-block:2px;border-radius:10px;border:1px solid var(--border);background:var(--translucent);backdrop-filter:blur(30px)}.theme.svelte-3jbat2.svelte-3jbat2{margin-inline:0.2rem}.eternal.svelte-3jbat2.svelte-3jbat2{margin-inline:0.3rem}main.svelte-3jbat2.svelte-3jbat2{display:flex;align-items:center;justify-content:center;margin-top:1rem;width:100%;position:fixed;background:transparent;font-family:'Inter', sans-serif}.logo.svelte-3jbat2.svelte-3jbat2{text-decoration:none;color:white;font-weight:700;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-inline:1rem;transition:all 0.3s}.logo.svelte-3jbat2.svelte-3jbat2:hover{opacity:0.5}.logo.svelte-3jbat2 img.svelte-3jbat2{width:1.7rem}.lefts.svelte-3jbat2.svelte-3jbat2{display:flex;align-items:center;justify-content:center}@media(max-width: 600px){.eternal.svelte-3jbat2.svelte-3jbat2{display:none}}",
+    css$b = {
+      code: "section.svelte-196840g{width:5.7rem;height:5.5rem;padding-block:5px;padding-inline:5px;position:absolute;right:0;top:2rem;background:var(--bg);border:1px solid var(--border);transform-origin:right top;transition:all 0.15s;-webkit-user-select:none;-moz-user-select:none;user-select:none;border-radius:10px;display:grid;box-shadow:0 0 10px 0 rgba(0, 0, 0, 0.1)}.btn.svelte-196840g{font-size:12px;padding-inline:7px;display:flex;align-items:center;gap:3px;border-radius:5px;transition:all 0.2s;cursor:pointer}.btn.svelte-196840g:hover{background:var(--border)}",
+      map: null
+    };
+    ThemeMenu = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let $themeMenu, $$unsubscribe_themeMenu;
+      $$unsubscribe_themeMenu = subscribe(themeMenu, (value) => $themeMenu = value);
+      let sectionRef;
+      let style = "scale: 0.9; opacity: 0; pointer-events: none";
+      const styles = [
+        { theme: "dark", name: "Dark" },
+        { theme: "light", name: "Light" },
+        { theme: "system", name: "System" }
+      ];
+      $$result.css.add(css$b);
+      {
+        {
+          if ($themeMenu) {
+            style = "scale: 1; opacity: 1; pointer-events: all";
+          } else {
+            style = "scale: 0.9; opacity: 0; pointer-events: none";
+          }
+        }
+      }
+      $$unsubscribe_themeMenu();
+      return `<section${add_attribute("style", style, 0)} class="svelte-196840g"${add_attribute("this", sectionRef, 0)}>${each(styles, (s4) => {
+        return `<div class="btn svelte-196840g">${validate_component(ThemeIcon, "ThemeIcon").$$render($$result, { mode: s4.theme }, {}, {})} <p>${escape2(s4.name)}</p> </div>`;
+      })} </section>`;
+    });
+    onNavigate = /* @__PURE__ */ client_method("on_navigate");
+    css$a = {
+      code: ".navtext.svelte-sdiwuj{z-index:2}.navs.svelte-sdiwuj{border-radius:100px;margin-top:10px;display:flex;align-items:center;border:1px solid var(--border);background:rgba(var(--bg-rgb), 0.2);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);position:relative;width:8.5rem;box-shadow:0 0 8px 0 rgba(0, 0, 0, 0.05)}.box.svelte-sdiwuj{position:absolute;height:1.6rem;z-index:-1;border-radius:100px;background:var(--text);opacity:1;transition:all 0.3s}.nav.svelte-sdiwuj{display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:15px;color:var(--btn-text);transition:all 0.2s;padding-block:3px;border-radius:100px;position:relative}.nav.svelte-sdiwuj:hover{color:var(--thin)}.works.svelte-sdiwuj{width:4rem}.contact.svelte-sdiwuj{width:4rem}",
+      map: null
+    };
+    worksStyle = "width: 4rem; left: 0; opacity: 1";
+    contactStyle = "width: 4.7rem; left: 59px; opacity: 1";
+    navStyle = "color: var(--bg);";
+    HeaderNav = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let boxStyle = "opacity: 0";
+      let route = "/";
+      onNavigate((c3) => {
+        route = c3.to.route.id;
+      });
+      $$result.css.add(css$a);
+      {
+        {
+          if (route === "/works") {
+            boxStyle = worksStyle;
+          } else if (route === "/contact") {
+            boxStyle = contactStyle;
+          } else {
+            boxStyle = "opacity: 0";
+          }
+        }
+      }
+      return `<div class="navs svelte-sdiwuj"><div class="box svelte-sdiwuj"${add_attribute("style", boxStyle, 0)}></div> <a class="nav works svelte-sdiwuj" href="/works"${add_attribute("style", `${route === "/works" ? navStyle : null}`, 0)}><p class="navtext svelte-sdiwuj" data-svelte-h="svelte-ky40d9">works</p></a> <a class="nav contact svelte-sdiwuj" href="/contact"${add_attribute("style", `${route === "/contact" ? navStyle : null}`, 0)}><p class="navtext svelte-sdiwuj" data-svelte-h="svelte-18oqy4j">contact</p></a> </div>`;
+    });
+    css$9 = {
+      code: ".container.svelte-1g5qcdz{width:35.2rem;display:block}.title.svelte-1g5qcdz{text-decoration:none;color:var(--text);font-family:'Inter', sans-serif;margin:0 auto 0 0}.name.svelte-1g5qcdz{font-weight:700;font-size:20px}.sub.svelte-1g5qcdz{margin-top:2px;font-size:14px}.right.svelte-1g5qcdz{display:flex;align-items:center;margin:0 0 0 auto}section.svelte-1g5qcdz{display:flex;justify-content:center;align-items:center;height:11rem;position:fixed;width:100%;padding:2rem;background:rgba(var(--bg-rgb), 0.75);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);z-index:100}.content.svelte-1g5qcdz{display:flex;align-items:center;justify-content:center}@media(max-width: 700px){section.svelte-1g5qcdz{padding:0;width:100%}.container.svelte-1g5qcdz{width:81%}}.theme.svelte-1g5qcdz{width:1.9rem;height:1.9rem;display:flex;align-items:center;justify-content:center;border-radius:7px;border:1px solid transparent;position:relative;margin-left:12px;transition:all 0.2s}.theme-icon.svelte-1g5qcdz{width:100%;height:100%;border-radius:7px;display:flex;align-items:center;justify-content:center;transition:all 0.2s}.theme-icon.svelte-1g5qcdz:hover{background:var(--outline)}.links.svelte-1g5qcdz{display:flex;align-items:center;justify-content:center;gap:20px}.link.svelte-1g5qcdz{text-decoration:none;color:var(--text);font-size:20px;transition:all 0.2s}.link.svelte-1g5qcdz:hover{opacity:0.6}",
       map: null
     };
     Header = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      let $theme, $$unsubscribe_theme;
-      $$unsubscribe_theme = subscribe(theme, (value) => $theme = value);
-      $$result.css.add(css$3);
-      $$unsubscribe_theme();
-      return `<main class="svelte-3jbat2"><div class="contents svelte-3jbat2"><a href="/" class="logo svelte-3jbat2"${add_attribute("style", `filter: invert(${$theme === "dark" ? 0 : 0.9})`, 0)}><img src="icon.svg" alt="logo" class="svelte-3jbat2"></a> <div class="lefts svelte-3jbat2"><div class="line svelte-3jbat2"></div> <div class="navigator">${validate_component(Navigator, "Navigator").$$render($$result, {}, {}, {})}</div> <div class="line svelte-3jbat2"></div> <div class="eternal svelte-3jbat2">${validate_component(Eternals, "Eternals").$$render($$result, {}, {}, {})}</div> <div class="line svelte-3jbat2"></div> <div class="theme svelte-3jbat2">${validate_component(Theme, "Theme").$$render($$result, {}, {}, {})}</div></div></div> </main>`;
+      const links = [
+        {
+          icon: faGithub,
+          href: "https://github.com/hideko-dev"
+        },
+        {
+          icon: faInstagram,
+          href: "https://instagram.com/hideko.cat"
+        }
+      ];
+      $$result.css.add(css$9);
+      return `<section class="svelte-1g5qcdz"><div class="container svelte-1g5qcdz"><div class="content svelte-1g5qcdz"><div class="left"><a class="title svelte-1g5qcdz" href="/" data-svelte-h="svelte-l8z930"><p class="name svelte-1g5qcdz">hideko</p> <p class="sub svelte-1g5qcdz">\u25CF fullstack engineer</p></a> ${validate_component(HeaderNav, "HeaderNav").$$render($$result, {}, {}, {})}</div> <div class="right svelte-1g5qcdz"><div class="links svelte-1g5qcdz">${each(links, (link) => {
+        return `<a${add_attribute("href", link.href, 0)} class="link svelte-1g5qcdz">${validate_component(Fa$1, "Fa").$$render($$result, { icon: link.icon }, {}, {})}</a>`;
+      })}</div> <div class="theme svelte-1g5qcdz"><div class="theme-icon svelte-1g5qcdz">${validate_component(ThemeIcon, "ThemeIcon").$$render($$result, {}, {}, {})}</div> ${validate_component(ThemeMenu, "ThemeMenu").$$render($$result, {}, {}, {})}</div></div></div></div> </section>`;
     });
-    css$2 = {
-      code: "section.svelte-1it0gry{height:3.5rem;display:flex;align-items:center;justify-content:center;font-family:'Roboto Mono Variable', sans-serif;font-weight:300;font-size:13px;gap:5px}a.svelte-1it0gry{color:var(--solid);text-decoration:none;transition:all 0.2s}a.svelte-1it0gry:hover{color:var(--text-thin)}@media(max-width: 600px){section.svelte-1it0gry{display:grid;place-content:center;gap:2px;text-align:center;height:4rem}}",
+    css$8 = {
+      code: "section.svelte-1hoqv4v{height:4rem;display:flex;align-items:center;justify-content:center;font-size:14px}",
       map: null
     };
     Footer = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      $$result.css.add(css$2);
-      return `<section class="svelte-1it0gry"><p class="copyright">\xA9 ${escape2((/* @__PURE__ */ new Date()).getFullYear())} Hideko (<a href="https://instagram.com/hideko.cat" class="svelte-1it0gry" data-svelte-h="svelte-tswr3r">@hideko.cat</a>).</p> <p data-svelte-h="svelte-1b254ly">All rights reserved</p> </section>`;
+      $$result.css.add(css$8);
+      return `<section class="svelte-1hoqv4v"><p>\xA9 ${escape2((/* @__PURE__ */ new Date()).getFullYear())} Hideko. All Rights Reserved.</p> </section>`;
     });
-    Fonts = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      return ``;
-    });
-    Transition = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+    PageTransition = create_ssr_component(($$result, $$props, $$bindings, slots) => {
       let { pathname = "" } = $$props;
       if ($$props.pathname === void 0 && $$bindings.pathname && pathname !== void 0)
         $$bindings.pathname(pathname);
       return `<div>${slots.default ? slots.default({}) : ``}</div>`;
     });
-    css$1 = {
-      code: ".loader.svelte-4o5ap3{background:#575757;width:100%;height:2px;z-index:10;position:fixed;transition:all 0.2s ease}",
+    handlers = {
+      startPause() {
+        startPause(Date.now());
+      },
+      endPause() {
+        endPause(Date.now());
+      },
+      updateHeight: (toastId, height) => {
+        update({ id: toastId, height });
+      },
+      calculateOffset
+    };
+    css$7 = {
+      code: "div.svelte-lzwg39{width:20px;opacity:0;height:20px;border-radius:10px;background:var(--primary, #61d345);position:relative;transform:rotate(45deg);animation:svelte-lzwg39-circleAnimation 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;animation-delay:100ms}div.svelte-lzwg39::after{content:'';box-sizing:border-box;animation:svelte-lzwg39-checkmarkAnimation 0.2s ease-out forwards;opacity:0;animation-delay:200ms;position:absolute;border-right:2px solid;border-bottom:2px solid;border-color:var(--secondary, #fff);bottom:6px;left:6px;height:10px;width:6px}@keyframes svelte-lzwg39-circleAnimation{from{transform:scale(0) rotate(45deg);opacity:0}to{transform:scale(1) rotate(45deg);opacity:1}}@keyframes svelte-lzwg39-checkmarkAnimation{0%{height:0;width:0;opacity:0}40%{height:0;width:6px;opacity:1}100%{opacity:1;height:10px}}",
       map: null
     };
-    Loader = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      let style = "width: 50%; opacity: 0; right:0;";
-      onNavigate((callback) => {
-        load2();
-      });
-      function load2() {
-        style = "width: 100%; opacity: 1; left:0;";
-        setTimeout(
-          () => {
-            style = "width: 50%; opacity: 0;right:0;";
-          },
-          300
-        );
-      }
-      $$result.css.add(css$1);
-      return `<div class="loader svelte-4o5ap3"${add_attribute("style", style, 0)}></div>`;
+    CheckmarkIcon = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let { primary = "#61d345" } = $$props;
+      let { secondary = "#fff" } = $$props;
+      if ($$props.primary === void 0 && $$bindings.primary && primary !== void 0)
+        $$bindings.primary(primary);
+      if ($$props.secondary === void 0 && $$bindings.secondary && secondary !== void 0)
+        $$bindings.secondary(secondary);
+      $$result.css.add(css$7);
+      return `  <div class="svelte-lzwg39"${add_styles({
+        "--primary": primary,
+        "--secondary": secondary
+      })}></div>`;
     });
-    css = {
-      code: ":root{background:var(--bg);color:var(--text);font-family:'Inter', sans-serif}",
+    css$6 = {
+      code: "div.svelte-10jnndo{width:20px;opacity:0;height:20px;border-radius:10px;background:var(--primary, #ff4b4b);position:relative;transform:rotate(45deg);animation:svelte-10jnndo-circleAnimation 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;animation-delay:100ms}div.svelte-10jnndo::after,div.svelte-10jnndo::before{content:'';animation:svelte-10jnndo-firstLineAnimation 0.15s ease-out forwards;animation-delay:150ms;position:absolute;border-radius:3px;opacity:0;background:var(--secondary, #fff);bottom:9px;left:4px;height:2px;width:12px}div.svelte-10jnndo:before{animation:svelte-10jnndo-secondLineAnimation 0.15s ease-out forwards;animation-delay:180ms;transform:rotate(90deg)}@keyframes svelte-10jnndo-circleAnimation{from{transform:scale(0) rotate(45deg);opacity:0}to{transform:scale(1) rotate(45deg);opacity:1}}@keyframes svelte-10jnndo-firstLineAnimation{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}@keyframes svelte-10jnndo-secondLineAnimation{from{transform:scale(0) rotate(90deg);opacity:0}to{transform:scale(1) rotate(90deg);opacity:1}}",
       map: null
     };
+    ErrorIcon = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let { primary = "#ff4b4b" } = $$props;
+      let { secondary = "#fff" } = $$props;
+      if ($$props.primary === void 0 && $$bindings.primary && primary !== void 0)
+        $$bindings.primary(primary);
+      if ($$props.secondary === void 0 && $$bindings.secondary && secondary !== void 0)
+        $$bindings.secondary(secondary);
+      $$result.css.add(css$6);
+      return `  <div class="svelte-10jnndo"${add_styles({
+        "--primary": primary,
+        "--secondary": secondary
+      })}></div>`;
+    });
+    css$5 = {
+      code: "div.svelte-bj4lu8{width:12px;height:12px;box-sizing:border-box;border:2px solid;border-radius:100%;border-color:var(--secondary, #e0e0e0);border-right-color:var(--primary, #616161);animation:svelte-bj4lu8-rotate 1s linear infinite}@keyframes svelte-bj4lu8-rotate{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}",
+      map: null
+    };
+    LoaderIcon = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let { primary = "#616161" } = $$props;
+      let { secondary = "#e0e0e0" } = $$props;
+      if ($$props.primary === void 0 && $$bindings.primary && primary !== void 0)
+        $$bindings.primary(primary);
+      if ($$props.secondary === void 0 && $$bindings.secondary && secondary !== void 0)
+        $$bindings.secondary(secondary);
+      $$result.css.add(css$5);
+      return `  <div class="svelte-bj4lu8"${add_styles({
+        "--primary": primary,
+        "--secondary": secondary
+      })}></div>`;
+    });
+    css$4 = {
+      code: ".indicator.svelte-1c92bpz{position:relative;display:flex;justify-content:center;align-items:center;min-width:20px;min-height:20px}.status.svelte-1c92bpz{position:absolute}.animated.svelte-1c92bpz{position:relative;transform:scale(0.6);opacity:0.4;min-width:20px;animation:svelte-1c92bpz-enter 0.3s 0.12s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards}@keyframes svelte-1c92bpz-enter{from{transform:scale(0.6);opacity:0.4}to{transform:scale(1);opacity:1}}",
+      map: null
+    };
+    ToastIcon = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let type;
+      let icon;
+      let iconTheme;
+      let { toast: toast2 } = $$props;
+      if ($$props.toast === void 0 && $$bindings.toast && toast2 !== void 0)
+        $$bindings.toast(toast2);
+      $$result.css.add(css$4);
+      ({ type, icon, iconTheme } = toast2);
+      return `${typeof icon === "string" ? `<div class="animated svelte-1c92bpz">${escape2(icon)}</div>` : `${typeof icon !== "undefined" ? `${validate_component(icon || missing_component, "svelte:component").$$render($$result, {}, {}, {})}` : `${type !== "blank" ? `<div class="indicator svelte-1c92bpz">${validate_component(LoaderIcon, "LoaderIcon").$$render($$result, Object.assign({}, iconTheme), {}, {})} ${type !== "loading" ? `<div class="status svelte-1c92bpz">${type === "error" ? `${validate_component(ErrorIcon, "ErrorIcon").$$render($$result, Object.assign({}, iconTheme), {}, {})}` : `${validate_component(CheckmarkIcon, "CheckmarkIcon").$$render($$result, Object.assign({}, iconTheme), {}, {})}`}</div>` : ``}</div>` : ``}`}`}`;
+    });
+    css$3 = {
+      code: ".message.svelte-o805t1{display:flex;justify-content:center;margin:4px 10px;color:inherit;flex:1 1 auto;white-space:pre-line}",
+      map: null
+    };
+    ToastMessage = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let { toast: toast2 } = $$props;
+      if ($$props.toast === void 0 && $$bindings.toast && toast2 !== void 0)
+        $$bindings.toast(toast2);
+      $$result.css.add(css$3);
+      return `<div${spread([{ class: "message" }, escape_object(toast2.ariaProps)], { classes: "svelte-o805t1" })}>${typeof toast2.message === "string" ? `${escape2(toast2.message)}` : `${validate_component(toast2.message || missing_component, "svelte:component").$$render($$result, { toast: toast2 }, {}, {})}`} </div>`;
+    });
+    css$2 = {
+      code: "@keyframes svelte-15lyehg-enterAnimation{0%{transform:translate3d(0, calc(var(--factor) * -200%), 0) scale(0.6);opacity:0.5}100%{transform:translate3d(0, 0, 0) scale(1);opacity:1}}@keyframes svelte-15lyehg-exitAnimation{0%{transform:translate3d(0, 0, -1px) scale(1);opacity:1}100%{transform:translate3d(0, calc(var(--factor) * -150%), -1px) scale(0.6);opacity:0}}@keyframes svelte-15lyehg-fadeInAnimation{0%{opacity:0}100%{opacity:1}}@keyframes svelte-15lyehg-fadeOutAnimation{0%{opacity:1}100%{opacity:0}}.base.svelte-15lyehg{display:flex;align-items:center;background:#fff;color:#363636;line-height:1.3;will-change:transform;box-shadow:0 3px 10px rgba(0, 0, 0, 0.1), 0 3px 3px rgba(0, 0, 0, 0.05);max-width:350px;pointer-events:auto;padding:8px 10px;border-radius:8px}.transparent.svelte-15lyehg{opacity:0}.enter.svelte-15lyehg{animation:svelte-15lyehg-enterAnimation 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards}.exit.svelte-15lyehg{animation:svelte-15lyehg-exitAnimation 0.4s cubic-bezier(0.06, 0.71, 0.55, 1) forwards}.fadeIn.svelte-15lyehg{animation:svelte-15lyehg-fadeInAnimation 0.35s cubic-bezier(0.21, 1.02, 0.73, 1) forwards}.fadeOut.svelte-15lyehg{animation:svelte-15lyehg-fadeOutAnimation 0.4s cubic-bezier(0.06, 0.71, 0.55, 1) forwards}",
+      map: null
+    };
+    ToastBar = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let { toast: toast2 } = $$props;
+      let { position = void 0 } = $$props;
+      let { style = "" } = $$props;
+      let { Component = void 0 } = $$props;
+      let factor;
+      let animation;
+      if ($$props.toast === void 0 && $$bindings.toast && toast2 !== void 0)
+        $$bindings.toast(toast2);
+      if ($$props.position === void 0 && $$bindings.position && position !== void 0)
+        $$bindings.position(position);
+      if ($$props.style === void 0 && $$bindings.style && style !== void 0)
+        $$bindings.style(style);
+      if ($$props.Component === void 0 && $$bindings.Component && Component !== void 0)
+        $$bindings.Component(Component);
+      $$result.css.add(css$2);
+      {
+        {
+          const top = (toast2.position || position || "top-center").includes("top");
+          factor = top ? 1 : -1;
+          const [enter, exit] = prefersReducedMotion() ? ["fadeIn", "fadeOut"] : ["enter", "exit"];
+          animation = toast2.visible ? enter : exit;
+        }
+      }
+      return `<div class="${"base " + escape2(toast2.height ? animation : "transparent", true) + " " + escape2(toast2.className || "", true) + " svelte-15lyehg"}"${add_styles(merge_ssr_styles(escape2(style, true) + "; " + escape2(toast2.style, true), { "--factor": factor }))}>${Component ? `${validate_component(Component || missing_component, "svelte:component").$$render($$result, {}, {}, {
+        message: () => {
+          return `${validate_component(ToastMessage, "ToastMessage").$$render($$result, { toast: toast2, slot: "message" }, {}, {})}`;
+        },
+        icon: () => {
+          return `${validate_component(ToastIcon, "ToastIcon").$$render($$result, { toast: toast2, slot: "icon" }, {}, {})}`;
+        }
+      })}` : `${slots.default ? slots.default({ ToastIcon, ToastMessage, toast: toast2 }) : ` ${validate_component(ToastIcon, "ToastIcon").$$render($$result, { toast: toast2 }, {}, {})} ${validate_component(ToastMessage, "ToastMessage").$$render($$result, { toast: toast2 }, {}, {})} `}`} </div>`;
+    });
+    css$1 = {
+      code: ".wrapper.svelte-1pakgpd{left:0;right:0;display:flex;position:absolute;transform:translateY(calc(var(--offset, 16px) * var(--factor) * 1px))}.transition.svelte-1pakgpd{transition:all 230ms cubic-bezier(0.21, 1.02, 0.73, 1)}.active.svelte-1pakgpd{z-index:9999}.active.svelte-1pakgpd>*{pointer-events:auto}",
+      map: null
+    };
+    ToastWrapper = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let top;
+      let bottom;
+      let factor;
+      let justifyContent;
+      let { toast: toast2 } = $$props;
+      let { setHeight } = $$props;
+      let wrapperEl;
+      if ($$props.toast === void 0 && $$bindings.toast && toast2 !== void 0)
+        $$bindings.toast(toast2);
+      if ($$props.setHeight === void 0 && $$bindings.setHeight && setHeight !== void 0)
+        $$bindings.setHeight(setHeight);
+      $$result.css.add(css$1);
+      top = toast2.position?.includes("top") ? 0 : null;
+      bottom = toast2.position?.includes("bottom") ? 0 : null;
+      factor = toast2.position?.includes("top") ? 1 : -1;
+      justifyContent = toast2.position?.includes("center") && "center" || (toast2.position?.includes("right") || toast2.position?.includes("end")) && "flex-end" || null;
+      return `<div class="${[
+        "wrapper svelte-1pakgpd",
+        (toast2.visible ? "active" : "") + " " + (!prefersReducedMotion() ? "transition" : "")
+      ].join(" ").trim()}"${add_styles({
+        "--factor": factor,
+        "--offset": toast2.offset,
+        top,
+        bottom,
+        "justify-content": justifyContent
+      })}${add_attribute("this", wrapperEl, 0)}>${toast2.type === "custom" ? `${validate_component(ToastMessage, "ToastMessage").$$render($$result, { toast: toast2 }, {}, {})}` : `${slots.default ? slots.default({ toast: toast2 }) : ` ${validate_component(ToastBar, "ToastBar").$$render($$result, { toast: toast2, position: toast2.position }, {}, {})} `}`} </div>`;
+    });
+    css2 = {
+      code: ".toaster.svelte-jyff3d{--default-offset:16px;position:fixed;z-index:9999;top:var(--default-offset);left:var(--default-offset);right:var(--default-offset);bottom:var(--default-offset);pointer-events:none}",
+      map: null
+    };
+    Toaster = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let $toasts, $$unsubscribe_toasts;
+      let { reverseOrder = false } = $$props;
+      let { position = "top-center" } = $$props;
+      let { toastOptions = void 0 } = $$props;
+      let { gutter = 8 } = $$props;
+      let { containerStyle = void 0 } = $$props;
+      let { containerClassName = void 0 } = $$props;
+      const { toasts: toasts2, handlers: handlers2 } = useToaster(toastOptions);
+      $$unsubscribe_toasts = subscribe(toasts2, (value) => $toasts = value);
+      let _toasts;
+      if ($$props.reverseOrder === void 0 && $$bindings.reverseOrder && reverseOrder !== void 0)
+        $$bindings.reverseOrder(reverseOrder);
+      if ($$props.position === void 0 && $$bindings.position && position !== void 0)
+        $$bindings.position(position);
+      if ($$props.toastOptions === void 0 && $$bindings.toastOptions && toastOptions !== void 0)
+        $$bindings.toastOptions(toastOptions);
+      if ($$props.gutter === void 0 && $$bindings.gutter && gutter !== void 0)
+        $$bindings.gutter(gutter);
+      if ($$props.containerStyle === void 0 && $$bindings.containerStyle && containerStyle !== void 0)
+        $$bindings.containerStyle(containerStyle);
+      if ($$props.containerClassName === void 0 && $$bindings.containerClassName && containerClassName !== void 0)
+        $$bindings.containerClassName(containerClassName);
+      $$result.css.add(css2);
+      _toasts = $toasts.map((toast2) => ({
+        ...toast2,
+        position: toast2.position || position,
+        offset: handlers2.calculateOffset(toast2, $toasts, {
+          reverseOrder,
+          gutter,
+          defaultPosition: position
+        })
+      }));
+      $$unsubscribe_toasts();
+      return `<div class="${"toaster " + escape2(containerClassName || "", true) + " svelte-jyff3d"}"${add_attribute("style", containerStyle, 0)} role="alert">${each(_toasts, (toast2) => {
+        return `${validate_component(ToastWrapper, "ToastWrapper").$$render(
+          $$result,
+          {
+            toast: toast2,
+            setHeight: (height) => handlers2.updateHeight(toast2.id, height)
+          },
+          {},
+          {}
+        )}`;
+      })} </div>`;
+    });
     Layout = create_ssr_component(($$result, $$props, $$bindings, slots) => {
       let { data } = $$props;
       if ($$props.data === void 0 && $$bindings.data && data !== void 0)
         $$bindings.data(data);
-      $$result.css.add(css);
-      return `<div>${validate_component(Fonts, "Fonts").$$render($$result, {}, {}, {})} ${validate_component(Loader, "Loader").$$render($$result, {}, {}, {})} ${validate_component(Header, "Header").$$render($$result, {}, {}, {})} ${validate_component(Transition, "PageTransition").$$render($$result, { pathname: data.pathname }, {}, {
+      return `<section>${validate_component(Header, "Header").$$render($$result, {}, {}, {})} ${validate_component(PageTransition, "PageTransition").$$render($$result, { pathname: data.pathname }, {}, {
         default: () => {
           return `${slots.default ? slots.default({}) : ``}`;
         }
-      })} ${validate_component(Footer, "Footer").$$render($$result, {}, {}, {})} </div>`;
+      })} ${validate_component(Footer, "Footer").$$render($$result, {}, {}, {})} ${validate_component(Toaster, "Toaster").$$render($$result, {}, {}, {})}</section>`;
     });
   }
 });
@@ -943,16 +1563,20 @@ var init__ = __esm({
     component = async () => component_cache ??= (await Promise.resolve().then(() => (init_layout_svelte(), layout_svelte_exports))).default;
     universal_id = "src/pages/+layout.js";
     server_id = "src/pages/+layout.server.js";
-    imports = ["_app/immutable/nodes/0.b4320f47.js", "_app/immutable/chunks/scheduler.0d2f776c.js", "_app/immutable/chunks/index.e8a83480.js", "_app/immutable/chunks/each.e59479a4.js", "_app/immutable/chunks/singletons.50650c4a.js"];
-    stylesheets = ["_app/immutable/assets/0.cae81bfb.css"];
-    fonts = ["_app/immutable/assets/inter-latin-100-normal.61cac109.woff2", "_app/immutable/assets/inter-latin-100-normal.59ff1c64.woff", "_app/immutable/assets/inter-latin-200-normal.74885a0c.woff2", "_app/immutable/assets/inter-latin-200-normal.71416c88.woff", "_app/immutable/assets/inter-latin-300-normal.6b2cee46.woff2", "_app/immutable/assets/inter-latin-300-normal.5a4fe5c8.woff", "_app/immutable/assets/inter-latin-400-normal.0364d368.woff2", "_app/immutable/assets/inter-latin-400-normal.e3982e96.woff", "_app/immutable/assets/inter-latin-500-normal.d5333670.woff2", "_app/immutable/assets/inter-latin-500-normal.bf069d84.woff", "_app/immutable/assets/inter-latin-600-normal.048d136d.woff2", "_app/immutable/assets/inter-latin-600-normal.b1aa30b3.woff", "_app/immutable/assets/inter-latin-700-normal.ced2d8e0.woff2", "_app/immutable/assets/inter-latin-700-normal.3edc8440.woff", "_app/immutable/assets/inter-latin-800-normal.a51ac27d.woff2", "_app/immutable/assets/inter-latin-800-normal.02e00891.woff", "_app/immutable/assets/inter-latin-900-normal.f2db7f82.woff2", "_app/immutable/assets/inter-latin-900-normal.0d86a631.woff", "_app/immutable/assets/poppins-latin-100-normal.a9220f99.woff2", "_app/immutable/assets/poppins-latin-100-normal.d1eda978.woff", "_app/immutable/assets/poppins-latin-200-normal.6f0c5725.woff2", "_app/immutable/assets/poppins-latin-200-normal.07512a37.woff", "_app/immutable/assets/poppins-latin-300-normal.78bc3aa7.woff2", "_app/immutable/assets/poppins-latin-300-normal.78a4e0ac.woff", "_app/immutable/assets/poppins-latin-400-normal.7d93459d.woff2", "_app/immutable/assets/poppins-latin-400-normal.2db0a254.woff", "_app/immutable/assets/poppins-latin-500-normal.cd36de20.woff2", "_app/immutable/assets/poppins-latin-500-normal.6f35fc59.woff", "_app/immutable/assets/poppins-latin-600-normal.f4e80d9d.woff2", "_app/immutable/assets/poppins-latin-600-normal.90ae1c77.woff", "_app/immutable/assets/poppins-latin-700-normal.9338e65f.woff2", "_app/immutable/assets/poppins-latin-700-normal.630ac4e1.woff", "_app/immutable/assets/poppins-latin-800-normal.60bf0aba.woff2", "_app/immutable/assets/poppins-latin-800-normal.993bd790.woff", "_app/immutable/assets/poppins-latin-900-normal.17ea1019.woff2", "_app/immutable/assets/poppins-latin-900-normal.940cfac0.woff", "_app/immutable/assets/roboto-mono-cyrillic-ext-wght-normal.d694a640.woff2", "_app/immutable/assets/roboto-mono-cyrillic-wght-normal.f5503b96.woff2", "_app/immutable/assets/roboto-mono-greek-wght-normal.5e78ebd0.woff2", "_app/immutable/assets/roboto-mono-vietnamese-wght-normal.1651b21a.woff2", "_app/immutable/assets/roboto-mono-latin-ext-wght-normal.d3f58cdc.woff2", "_app/immutable/assets/roboto-mono-latin-wght-normal.47388fbc.woff2"];
+    imports = ["_svelte/immutable/nodes/0.f6f58ae1.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js", "_svelte/immutable/chunks/index.5ba2287e.js", "_svelte/immutable/chunks/index.9014b818.js", "_svelte/immutable/chunks/singletons.c79871f0.js", "_svelte/immutable/chunks/Toaster.svelte_svelte_type_style_lang.c1062644.js"];
+    stylesheets = ["_svelte/immutable/assets/0.730475c8.css", "_svelte/immutable/assets/index.32503cb2.css", "_svelte/immutable/assets/Toaster.5032d475.css"];
+    fonts = ["_svelte/immutable/assets/inter-latin-100-normal.427261e2.woff2", "_svelte/immutable/assets/inter-latin-100-normal.92f0bcbb.woff", "_svelte/immutable/assets/inter-latin-200-normal.63325fd5.woff2", "_svelte/immutable/assets/inter-latin-200-normal.d7612e1d.woff", "_svelte/immutable/assets/inter-latin-300-normal.09eea703.woff2", "_svelte/immutable/assets/inter-latin-300-normal.5d9c64fb.woff", "_svelte/immutable/assets/inter-latin-400-normal.2301bb03.woff2", "_svelte/immutable/assets/inter-latin-400-normal.86efb4c9.woff", "_svelte/immutable/assets/inter-latin-500-normal.eebf14ab.woff2", "_svelte/immutable/assets/inter-latin-500-normal.1637831b.woff", "_svelte/immutable/assets/inter-latin-600-normal.3022fadd.woff2", "_svelte/immutable/assets/inter-latin-600-normal.93b3d09b.woff", "_svelte/immutable/assets/inter-latin-700-normal.7b43cb86.woff2", "_svelte/immutable/assets/inter-latin-700-normal.eb518b64.woff", "_svelte/immutable/assets/inter-latin-800-normal.03db2737.woff2", "_svelte/immutable/assets/inter-latin-800-normal.c139f4bb.woff", "_svelte/immutable/assets/inter-latin-900-normal.c67b5d31.woff2", "_svelte/immutable/assets/inter-latin-900-normal.2e4b4c87.woff", "_svelte/immutable/assets/poppins-latin-100-normal.a9220f99.woff2", "_svelte/immutable/assets/poppins-latin-100-normal.d1eda978.woff", "_svelte/immutable/assets/poppins-latin-200-normal.6f0c5725.woff2", "_svelte/immutable/assets/poppins-latin-200-normal.07512a37.woff", "_svelte/immutable/assets/poppins-latin-300-normal.78bc3aa7.woff2", "_svelte/immutable/assets/poppins-latin-300-normal.78a4e0ac.woff", "_svelte/immutable/assets/poppins-latin-400-normal.7d93459d.woff2", "_svelte/immutable/assets/poppins-latin-400-normal.2db0a254.woff", "_svelte/immutable/assets/poppins-latin-500-normal.cd36de20.woff2", "_svelte/immutable/assets/poppins-latin-500-normal.6f35fc59.woff", "_svelte/immutable/assets/poppins-latin-600-normal.f4e80d9d.woff2", "_svelte/immutable/assets/poppins-latin-600-normal.90ae1c77.woff", "_svelte/immutable/assets/poppins-latin-700-normal.9338e65f.woff2", "_svelte/immutable/assets/poppins-latin-700-normal.630ac4e1.woff", "_svelte/immutable/assets/poppins-latin-800-normal.60bf0aba.woff2", "_svelte/immutable/assets/poppins-latin-800-normal.993bd790.woff", "_svelte/immutable/assets/poppins-latin-900-normal.17ea1019.woff2", "_svelte/immutable/assets/poppins-latin-900-normal.940cfac0.woff"];
   }
 });
 
-// .extend/output/server/chunks/stores.js
-var getStores, page;
-var init_stores = __esm({
-  ".extend/output/server/chunks/stores.js"() {
+// .extend/output/server/entries/fallbacks/error.svelte.js
+var error_svelte_exports = {};
+__export(error_svelte_exports, {
+  default: () => Error$1
+});
+var getStores, page, Error$1;
+var init_error_svelte = __esm({
+  ".extend/output/server/entries/fallbacks/error.svelte.js"() {
     init_ssr();
     getStores = () => {
       const stores = getContext("__svelte__");
@@ -975,20 +1599,7 @@ var init_stores = __esm({
         return store.subscribe(fn);
       }
     };
-  }
-});
-
-// .extend/output/server/entries/fallbacks/error.svelte.js
-var error_svelte_exports = {};
-__export(error_svelte_exports, {
-  default: () => Error2
-});
-var Error2;
-var init_error_svelte = __esm({
-  ".extend/output/server/entries/fallbacks/error.svelte.js"() {
-    init_ssr();
-    init_stores();
-    Error2 = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+    Error$1 = create_ssr_component(($$result, $$props, $$bindings, slots) => {
       let $page, $$unsubscribe_page;
       $$unsubscribe_page = subscribe(page, (value) => $page = value);
       $$unsubscribe_page();
@@ -1011,240 +1622,105 @@ var init__2 = __esm({
   ".extend/output/server/nodes/1.js"() {
     index2 = 1;
     component2 = async () => component_cache2 ??= (await Promise.resolve().then(() => (init_error_svelte(), error_svelte_exports))).default;
-    imports2 = ["_app/immutable/nodes/1.705582bc.js", "_app/immutable/chunks/scheduler.0d2f776c.js", "_app/immutable/chunks/index.e8a83480.js", "_app/immutable/chunks/stores.3b1731a6.js", "_app/immutable/chunks/singletons.50650c4a.js"];
+    imports2 = ["_svelte/immutable/nodes/1.e9294e21.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js", "_svelte/immutable/chunks/singletons.c79871f0.js", "_svelte/immutable/chunks/index.5ba2287e.js"];
     stylesheets2 = [];
     fonts2 = [];
   }
 });
 
-// .extend/output/server/entries/pages/_page.js
-var page_exports = {};
-__export(page_exports, {
-  ssr: () => ssr2
-});
-var ssr2;
-var init_page = __esm({
-  ".extend/output/server/entries/pages/_page.js"() {
-    ssr2 = true;
-  }
-});
-
-// .extend/output/server/entries/pages/index/_page.svelte.js
-var page_svelte_exports = {};
-__export(page_svelte_exports, {
-  default: () => Page
-});
-var catIcon, css$22, About, css$12, Bio, css2, Page;
-var init_page_svelte = __esm({
-  ".extend/output/server/entries/pages/home/_page.svelte.js"() {
+// .extend/output/server/chunks/pageTitle.js
+var Title, css3, PageTitle;
+var init_pageTitle = __esm({
+  ".extend/output/server/chunks/pageTitle.js"() {
     init_ssr();
-    catIcon = "data:image/webp;base64,UklGRloKAABXRUJQVlA4IE4KAADwLwCdASqAAIAAPm0uk0akIqGmqpYcoNANiWVrT1gZ9opYh6fn34+bv5nLoOQ+z4gZdDjC5RiwQeO7237Z6h3SoPEfQvmppS8W9L1DPOtwdQ7hLLf+acZ0/LoedFF72Gi/PnCHk/255z/3h8Exqn61Fhq4mPWHFjyycbgf9qVWFesy84jV9fH/C8Sd0e9QI888p8R4PopxWH/6nK7i72ZWaxCveXwn/nABaZxAGA9fPayoo4ndmYJ4nsekVF260NhOM6UZILtJF95wq7Cjow1TVbAGhGJVPZn/87oHhfHCINximzTOM4/h0udCB5TCdWHCCwC08eGv9e/E2BiY1tcJp8h83x6WsG82Ln1bdAN2USSLGEo98/lzi2Yd+RlJQyqaFKO2JAdecrtHAsQxDoCk2gaOcruTtNBP/o25n1y8li7ksLi48/RhvM8LRJMOvaI/YLKE9rr8xl7QjZ9g3niHLbn+CEC4//xpSCPtyeuqLRhd2pHIH9x7o+qGOupvrjkSt4c2t6Y8AAD+/m4hCrSKt5tPevh/xNvUsozQI+ZzawpPJNwN83HgQcu6yPKu37q6tjgOqdxuPqGo/YZs/kbrB2gHXSABEnWIxX2e/Z7uRwIvRtwLBLasNcjucf4zcgv2JC44rSsGsexDvv7DkFtEw15jUTBcNP1cZstqaJCVWQfwZJC3OULH/N/QMbgyYZLbFBpGsQsyFY5cjygSVJWOJhO/nHEeaQm9hEOy78lrBQniSkNgiAEUot5QS7STIjpTOHqbMQXt2pXgdzJUrOkZ4gWHbPK+zSVtP96m+bh1EgOuODP0Hc597maxIVh+LYSy82OZjf6BE9pReufuWzdJuYaozldGNXDdDQHl0GTJD5+76pYq8Z4Bfp38ceaOp/EQMsAslFTeocl1gGqpNtgxD0cGP59ZKNNBcqgHlnuzSddCYdUfQaqGl/FJM040+GbOoYgX94iQRA6X66ThK09j4SPp8YAeLEBR1OdY0Jx2Y+TqzssalUW79deDseGT3KmfMQFHFjANNUARVpf6tHeR/l81KUnYcX85lgXtqFLVeSWEoHDIJZeuFRx8BbZWR1oNAvcH8ltrJraUPRv6OqYqg5aCmO6SyBzy8hNfElOvxSFx1/kCy4O4f4krl5OV4LndLKEmU3il27/Zb9WyNvol/Pgldk6biLVqE21odTe14gzcFSDs3WrwO2mFxIXQtqXkv1cB95JGXA+julPYrw8Tozh81kocfbjDlElGoXDb2lXeEwvWKm37eFXutkctljmDXQapTDZ4VBeCJoFNqCwSMyLAFLtUCOVSve4zoQtkms2PHYK2pL4y/Q3ryUBXzt4I0zx1jUJjex8qFqThzF5+R5jKwbD3gncpl9DZWqWUhzMLZMLr9M792Nx9zm8vX53mc64Ej1Q+GsIxWvcWFo79GXGvkMAFCGysK/kgp+oIGClytJSA+0GsvPJoXTZJOlcsKLIsOEh3Lefnl/uv97JVhVZed3NYY85EB+UGz/ghIQnET4lgMi0NW6YMWPf9hv5bORoQ9yCuErCiZHCbILH0hYWJpBHQs2fE6crc/DHTHqZm8jZL1rP5osdIElZBnqQhTEk+E3lM6IplekGZ5isOICLwS6GcFXfZTUzVAfiJhWh+2UKmihKI7O5tYOwCcM6f/8LHyNWOVc1AFHLWxnl3N7rPVa8iIwEnfk7hF19YyFNPsCIkaKKbImNhRWmLQAt0wdCnfHy0OdGqeALfBqYkRpAKKEn5HsuhNmTm5fSkxAuZuBjb4mBM17qRlSrVTW07oX/1a2m+Srgr9IuFqu373RqgXLQnFK15QqiHzI2l1sjyPhL3hrHj+PRZUkOYTg7MON6ujzNvo9sDJmWbkEpka0Bx1MQaHAEUhGmF+yGOFdCRYnQzXWuUBzZsJ3W1I1ifqfeg+k9oXeQ5lfX4bzm3bRzIPQvdjZXr5ZZHYn7/P6IxTElOe+xzi8U3/zIA4UgA572xWUfPv2XT828kjSegOSIdRKQ8TwRMj6jLmlY65QFzGSgem5Itz+te1wX7Kv4wITPY90ZA5lQkz1UwpZzBG4lmVFOSIUQluPCl4lnT2rm79/VsKNSw9MdmIjxFZ8wGcyO/17crUEpZu6VmgNTXeesjS7Qo0FAxA0H8NLVMv2qsazRjgOMVvguKbEd3kMh+JyyMoAdHD0W1HeMQkX+hMSCqNTHsR7//SHzU1+CfUxOq/4yMnw4Dm1l9rlxc2h0jzYYELmEbkLfIwrun7zYVmhBb+0c5EW95phXEseqE0X3qxox/oeUcZI4oLFAZDRDP7wJCpaKRoW+u5w159wW7evJcf6PNfdOPyjfCL+VEA33iGXzCzd/nruKLiFMnx9GkZwcefwfQTZrWAzcmdMtHjdn7VaooMlMWJMGHWMuVsb1Y5w/KASkUc2S5qnMIQYxLDMCZQonioKDJALdIpHS17BPwIbevYxMyfB2rtp1ypDNl60v/y1t4IYi2l/BdCqkzncgbwZzLqpBDHxTmeiBo9DyD5hC2sScMQSWRQ9+RKRcFggRSsciUZxjewv/VnK0Du+FcfZoX05lvXyQYmQu0/6BHC9Avq9IDuVVzneAA+mbllingTBfIXRSoX00H8pX3kmCMh5cbuUSj1hfhKRzEEVrceHJJ96+NoJOaZmLMk7+sOlzDNTRnLNmih1cMk2vmKHMOHenL+XKP4FIEOhIJ0S3t4kguF1i+JeY+Tr7SaUB4+PaLQXXhjl+vgTr5XOIj4nxKGVMf2eZ66SGI7zZQUSTi3rtc4g9NmQ5bXaFiJ6O22Z6nj4P4j21qheg4uUbFIU/diyy63Yvr9uTm/xm4x75WpK4H/REitzY9lNAwosCH75Wo+xNOeq3AvelUksClnOAoBtMUhzLdGAUPrhYsbc20w8bSwH2YOBfnffaevhwt74QqMw9cRDR5bqWfCA/qAfcwewln9uVhhW+aQuN4vxFkVydSzB5aZ0bs0VeXsIVr9zONsafXHDdX8wxPej+P1BKb1bZBxUzpFKbBc61vFhtafIoITOdbSN6UM8r152EQiehd/EviXzQChLc9hznLUUzFWRjuX3IsbrKg/MToyrwePR3PISAPQwyRgwgIxQX818Peyll3XocgS3RpqW6GKnA3jbaDEkdc+1QyxVzMtu8oJ2WztGCzo0tDsbcOvvnp76xts0uzWXof4tOFI9rKVOv8jeFRduuXX6pov5tuEw3mjNCnsd5JY3IkmWOoaqBaFOBopqLMF887Se2enfb/GiSO7yDCJobHiVgy+r8yTijxvGgZuLWQMmezPnnS8mJrqm5sIAs6HOhi/EG4LLfmFGwqSPet0KH01GRqtpTUnq19zCmnD6+x8qfVsy4ECDZrkIt3vCV8N0cqZA/ErJi97UyEfb0WoEjPN8yNBc5cwG8OsiQUIdL1KoV8zfCAnGRsgmxD7WlPVvf4cqj8yIkSGaFCDGYq2NtZDssrX1cEpJZO6MZHuyyglRoOGGjvgi/GlpvJBsMMwDIAAAAA";
-    css$22 = {
-      code: 'section.svelte-1t22gv0{margin-top:7rem}.title.svelte-1t22gv0{font-weight:700;font-size:25px}.bios.svelte-1t22gv0{margin:0 auto;width:30rem}.tech.svelte-1t22gv0{margin-top:15px}img.svelte-1t22gv0{float:right;margin-left:1rem;margin-bottom:1rem;border-radius:100%;outline:1px solid var(--border);aspect-ratio:1 / 1;height:120px;width:120px;object-fit:cover}a.svelte-1t22gv0{text-decoration:none;color:var(--text);position:relative}a.svelte-1t22gv0:after{content:"";position:absolute;left:0;bottom:0;width:100%;height:1px;background:var(--text-thin);transition:all 0.2s}a.svelte-1t22gv0:hover::before{background:var(--text)\r\n    }@media(max-width: 600px){.bios.svelte-1t22gv0{width:20rem}}',
-      map: null
-    };
-    About = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      $$result.css.add(css$22);
-      return `<section class="svelte-1t22gv0" data-svelte-h="svelte-cdlwgo"><p class="title svelte-1t22gv0">About</p> <div class="bios svelte-1t22gv0"><img${add_attribute("src", catIcon, 0)} alt="icon" class="svelte-1t22gv0"> <div class="bio svelte-1t22gv0">I am a front end developer. I can do backend and software as well as frontend. Not only that, I release various projects as open source.
-            <br><br>
-            When I was very young, I fell in love with Minecraft and wanted to create plug-ins and mods from it. From there I worked hard to buy a computer and suddenly started learning Java.
-            <br><br>
-            I said I was learning Java out of the blue, and I didn&#39;t do any research to make sure I was doing it right.
-            <br><br>
-            After that I stopped programming for about two years, and after that I suddenly wanted to do front-end development.
-            <br><br>
-            In the beginning, we created a simple static site with only HTML, CSS, and JavaScript. From there, I became interested in React and learned about it, and then Next.js.
-            <br><br>
-            From there, I fell in love with JavaScript and started back-end development with Nodejs, and have done many other things. At first I created a portfolio with React, but I failed many times.
-            <br><br>
-            That&#39;s when I came across Svelte, which I felt was the framework that best suited me, and from there I created
-            <a href="https://v1.hideko.cf" class="svelte-1t22gv0">Portfolio v1</a>. This was also a failure, but from there I went through a lot of trial and error and eventually created <a href="https://hideko.cf" class="svelte-1t22gv0">Portfolio v5</a>.
-            <br><br>
-            We developed not only the front end but also the back end, including Thundis, discord-cdn-deliver, ModUs and Meteor using Electron. From there, I worked on the front-end development of yukieiji&#39;s ExtremeRoles to learn a great deal about Git, including Branches, Issues, Pull Requests, and Git Command. Docs, etc. I was involved in the development of ExtremeRoles.</div></div> </section>`;
-    });
-    css$12 = {
-      code: "section.svelte-gcbuns{margin-top:3rem;margin-bottom:4rem}.title.svelte-gcbuns{font-weight:700;font-size:25px}.years.svelte-gcbuns{margin-top:15px}.year.svelte-gcbuns{display:flex;align-items:center;margin-block:5px}.main.svelte-gcbuns{font-weight:600;width:40px}.line.svelte-gcbuns{height:10px;width:2px;background:var(--text-thin);margin-inline:6px}",
-      map: null
-    };
-    Bio = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      const years = [
-        {
-          year: "2010",
-          content: "Born in Miyazaki (\u5BAE\u5D0E), Japan"
-        },
-        { year: "2018", content: "Hello to world" },
-        { year: "2023", content: "Hello to world" },
-        { year: "2023", content: "Hello to world" }
-      ];
-      $$result.css.add(css$12);
-      return `<section class="svelte-gcbuns"><p class="title svelte-gcbuns" data-svelte-h="svelte-9j7g05">Bio</p> <div class="years svelte-gcbuns">${each(years, (c3) => {
-        return `<div class="year svelte-gcbuns"><p class="main svelte-gcbuns">${escape2(c3.year)}</p> <div class="line svelte-gcbuns"></div> <p class="content">${escape2(c3.content)}</p> </div>`;
-      })}</div> </section>`;
-    });
-    css2 = {
-      code: "section.svelte-1d13hta{display:flex;justify-content:center;height:max-content;font-family:'Inter', sans-serif}",
-      map: null
-    };
-    Page = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      $$result.css.add(css2);
-      return `${$$result.head += `<!-- HEAD_svelte-6nd7t7_START -->${$$result.title = `<title>Home - Hideko Portfolio</title>`, ""}<!-- HEAD_svelte-6nd7t7_END -->`, ""} <section class="svelte-1d13hta"><div>${validate_component(About, "About").$$render($$result, {}, {}, {})} ${validate_component(Bio, "Bio").$$render($$result, {}, {}, {})}</div> </section>`;
-    });
-  }
-});
-
-// .extend/output/server/entries/pages/_page.svelte.js
-var page_svelte_exports2 = {};
-__export(page_svelte_exports2, {
-  default: () => Page2
-});
-var Page2;
-var init_page_svelte2 = __esm({
-  ".extend/output/server/entries/pages/_page.svelte.js"() {
-    init_ssr();
-    init_page_svelte();
-    Page2 = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      return `${validate_component(Page, "Home").$$render($$result, {}, {}, {})}`;
-    });
-  }
-});
-
-// .extend/output/server/nodes/2.js
-var __exports3 = {};
-__export(__exports3, {
-  component: () => component3,
-  fonts: () => fonts3,
-  imports: () => imports3,
-  index: () => index3,
-  stylesheets: () => stylesheets3,
-  universal: () => page_exports,
-  universal_id: () => universal_id2
-});
-var index3, component_cache3, component3, universal_id2, imports3, stylesheets3, fonts3;
-var init__3 = __esm({
-  ".extend/output/server/nodes/2.js"() {
-    init_page();
-    index3 = 2;
-    component3 = async () => component_cache3 ??= (await Promise.resolve().then(() => (init_page_svelte2(), page_svelte_exports2))).default;
-    universal_id2 = "src/pages/+index.js";
-    imports3 = ["_app/immutable/nodes/2.8d806d5f.js", "_app/immutable/chunks/scheduler.0d2f776c.js", "_app/immutable/chunks/index.e8a83480.js", "_app/immutable/nodes/4.519bdf17.js", "_app/immutable/chunks/each.e59479a4.js"];
-    stylesheets3 = ["_app/immutable/assets/4.b5e53664.css"];
-    fonts3 = [];
-  }
-});
-
-// .extend/output/server/entries/pages/contact/_page.svelte.js
-var page_svelte_exports3 = {};
-__export(page_svelte_exports3, {
-  default: () => Page3
-});
-var css$13, Inputs, css3, Page3;
-var init_page_svelte3 = __esm({
-  ".extend/output/server/entries/pages/contact/_page.svelte.js"() {
-    init_ssr();
-    css$13 = {
-      code: "section.svelte-jm7zn5{display:flex;flex-direction:column;border:1px solid var(--border);width:20rem;height:max-content;padding:1rem;border-radius:10px;font-family:'Roboto Mono Variable', sans-serif;font-weight:400}span.svelte-jm7zn5{font-size:13px;color:var(--text-thin)}.type.svelte-jm7zn5{margin-top:5px;background:transparent;border:1px solid var(--thin);color:var(--text);padding-inline:10px;resize:none;border-radius:5px;transition:all 0.3s}.req.svelte-jm7zn5{margin-top:1rem}input.svelte-jm7zn5{height:2rem;transition:all 0.3s}textarea.svelte-jm7zn5{height:7rem;padding-block:10px;transition:all 0.3s}.type.svelte-jm7zn5:focus{outline:none;border-color:var(--solid)}.submit.svelte-jm7zn5{font-size:15px;display:flex;align-items:center;justify-content:center;width:100%;height:2rem;border:1px solid var(--thin);border-radius:5px;transition:all 0.3s;color:var(--text-thin);cursor:pointer;margin-top:8px;user-select:none}.submit.svelte-jm7zn5:hover{background:var(--border);color:var(--text)}",
-      map: null
-    };
-    Inputs = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      let mail;
-      $$result.css.add(css$13);
-      return `<section class="svelte-jm7zn5"><span class="svelte-jm7zn5" data-svelte-h="svelte-1bg9cgq">Email</span> <input class="type svelte-jm7zn5" type="email"${add_attribute("value", mail, 0)}> <span class="req svelte-jm7zn5" data-svelte-h="svelte-1xd8qgz">What are the requirements?</span> <textarea class="type svelte-jm7zn5">${escape2("")}</textarea> <div class="submit svelte-jm7zn5" data-svelte-h="svelte-1a7few4">Submit</div> </section>`;
+    Title = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let { value } = $$props;
+      if ($$props.value === void 0 && $$bindings.value && value !== void 0)
+        $$bindings.value(value);
+      return `${$$result.head += `<!-- HEAD_svelte-a43fy5_START -->${$$result.title = `<title>${escape2(value)} - Hideko</title>`, ""}<!-- HEAD_svelte-a43fy5_END -->`, ""}`;
     });
     css3 = {
-      code: "section.svelte-e0n9er{display:flex;align-items:center;justify-content:center;height:100vh;font-weight:600;font-size:25px}.title.svelte-e0n9er{margin-left:2px;margin-bottom:8px}",
+      code: ".title.svelte-1alequ2{display:flex;align-items:center;font-family:'Inter', sans-serif;font-weight:700;font-size:25px;gap:4px}.titles.svelte-1alequ2{transition:all 0.2s}",
       map: null
     };
-    Page3 = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+    PageTitle = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let { title } = $$props;
+      let { customStyle } = $$props;
+      if ($$props.title === void 0 && $$bindings.title && title !== void 0)
+        $$bindings.title(title);
+      if ($$props.customStyle === void 0 && $$bindings.customStyle && customStyle !== void 0)
+        $$bindings.customStyle(customStyle);
       $$result.css.add(css3);
-      return `${$$result.head += `<!-- HEAD_svelte-bf9z80_START -->${$$result.title = `<title>Contact - Hideko Portfolio</title>`, ""}<!-- HEAD_svelte-bf9z80_END -->`, ""} <section class="svelte-e0n9er"><div><p class="title svelte-e0n9er" data-svelte-h="svelte-1cwg6cj">Contact</p> ${validate_component(Inputs, "Inputs").$$render($$result, {}, {}, {})}</div> </section>`;
+      return `<div class="title svelte-1alequ2"${add_attribute("style", customStyle, 0)}><p class="titles svelte-1alequ2">${escape2(title)}</p> </div>`;
     });
   }
 });
 
-// .extend/output/server/nodes/3.js
-var __exports4 = {};
-__export(__exports4, {
-  component: () => component4,
-  fonts: () => fonts4,
-  imports: () => imports4,
-  index: () => index4,
-  stylesheets: () => stylesheets4
-});
-var index4, component_cache4, component4, imports4, stylesheets4, fonts4;
-var init__4 = __esm({
-  ".extend/output/server/nodes/3.js"() {
-    index4 = 3;
-    component4 = async () => component_cache4 ??= (await Promise.resolve().then(() => (init_page_svelte3(), page_svelte_exports3))).default;
-    imports4 = ["_app/immutable/nodes/3.658b44a5.js", "_app/immutable/chunks/scheduler.0d2f776c.js", "_app/immutable/chunks/index.e8a83480.js"];
-    stylesheets4 = ["_app/immutable/assets/3.0f69a980.css"];
-    fonts4 = [];
-  }
-});
-
-// .extend/output/server/nodes/4.js
-var __exports5 = {};
-__export(__exports5, {
-  component: () => component5,
-  fonts: () => fonts5,
-  imports: () => imports5,
-  index: () => index5,
-  stylesheets: () => stylesheets5
-});
-var index5, component_cache5, component5, imports5, stylesheets5, fonts5;
-var init__5 = __esm({
-  ".extend/output/server/nodes/4.js"() {
-    index5 = 4;
-    component5 = async () => component_cache5 ??= (await Promise.resolve().then(() => (init_page_svelte(), page_svelte_exports))).default;
-    imports5 = ["_app/immutable/nodes/4.519bdf17.js", "_app/immutable/chunks/scheduler.0d2f776c.js", "_app/immutable/chunks/index.e8a83480.js", "_app/immutable/chunks/each.e59479a4.js"];
-    stylesheets5 = ["_app/immutable/assets/4.b5e53664.css"];
-    fonts5 = [];
-  }
-});
-
-// .extend/output/server/entries/pages/pg/_page.svelte.js
-var page_svelte_exports4 = {};
-__export(page_svelte_exports4, {
-  default: () => Page4
-});
-var css4, Page4;
-var init_page_svelte4 = __esm({
-  ".extend/output/server/entries/pages/pg/_page.svelte.js"() {
-    init_ssr();
-    css4 = {
-      code: "main.svelte-1t992sw{height:100vh;display:flex;align-items:center;justify-content:center}div.svelte-1t992sw{margin-top:1rem}",
-      map: null
+// node_modules/.pnpm/@fortawesome+free-solid-svg-icons@6.5.1/node_modules/@fortawesome/free-solid-svg-icons/index.mjs
+var faCircleNotch, faPlug, faMicrochip, faMeteor;
+var init_free_solid_svg_icons = __esm({
+  "node_modules/.pnpm/@fortawesome+free-solid-svg-icons@6.5.1/node_modules/@fortawesome/free-solid-svg-icons/index.mjs"() {
+    faCircleNotch = {
+      prefix: "fas",
+      iconName: "circle-notch",
+      icon: [512, 512, [], "f1ce", "M222.7 32.1c5 16.9-4.6 34.8-21.5 39.8C121.8 95.6 64 169.1 64 256c0 106 86 192 192 192s192-86 192-192c0-86.9-57.8-160.4-137.1-184.1c-16.9-5-26.6-22.9-21.5-39.8s22.9-26.6 39.8-21.5C434.9 42.1 512 140 512 256c0 141.4-114.6 256-256 256S0 397.4 0 256C0 140 77.1 42.1 182.9 10.6c16.9-5 34.8 4.6 39.8 21.5z"]
     };
-    Page4 = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      let password = "";
-      $$result.css.add(css4);
-      return `<main class="svelte-1t992sw"><div class="svelte-1t992sw"><h1 data-svelte-h="svelte-17i6dvv">File Upload</h1> <input type="text"${add_attribute("value", password, 0)}> <input type="file" id="fileInput"> <button data-svelte-h="svelte-1fzyxn4">Upload</button></div> </main>`;
-    });
+    faPlug = {
+      prefix: "fas",
+      iconName: "plug",
+      icon: [384, 512, [128268], "f1e6", "M96 0C78.3 0 64 14.3 64 32v96h64V32c0-17.7-14.3-32-32-32zM288 0c-17.7 0-32 14.3-32 32v96h64V32c0-17.7-14.3-32-32-32zM32 160c-17.7 0-32 14.3-32 32s14.3 32 32 32v32c0 77.4 55 142 128 156.8V480c0 17.7 14.3 32 32 32s32-14.3 32-32V412.8C297 398 352 333.4 352 256V224c17.7 0 32-14.3 32-32s-14.3-32-32-32H32z"]
+    };
+    faMicrochip = {
+      prefix: "fas",
+      iconName: "microchip",
+      icon: [512, 512, [], "f2db", "M176 24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64c-35.3 0-64 28.7-64 64H24c-13.3 0-24 10.7-24 24s10.7 24 24 24H64v56H24c-13.3 0-24 10.7-24 24s10.7 24 24 24H64v56H24c-13.3 0-24 10.7-24 24s10.7 24 24 24H64c0 35.3 28.7 64 64 64v40c0 13.3 10.7 24 24 24s24-10.7 24-24V448h56v40c0 13.3 10.7 24 24 24s24-10.7 24-24V448h56v40c0 13.3 10.7 24 24 24s24-10.7 24-24V448c35.3 0 64-28.7 64-64h40c13.3 0 24-10.7 24-24s-10.7-24-24-24H448V280h40c13.3 0 24-10.7 24-24s-10.7-24-24-24H448V176h40c13.3 0 24-10.7 24-24s-10.7-24-24-24H448c0-35.3-28.7-64-64-64V24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64H280V24c0-13.3-10.7-24-24-24s-24 10.7-24 24V64H176V24zM160 128H352c17.7 0 32 14.3 32 32V352c0 17.7-14.3 32-32 32H160c-17.7 0-32-14.3-32-32V160c0-17.7 14.3-32 32-32zm192 32H160V352H352V160z"]
+    };
+    faMeteor = {
+      prefix: "fas",
+      iconName: "meteor",
+      icon: [512, 512, [9732], "f753", "M493.7 .9L299.4 75.6l2.3-29.3c1-12.8-12.8-21.5-24-15.1L101.3 133.4C38.6 169.7 0 236.6 0 309C0 421.1 90.9 512 203 512c72.4 0 139.4-38.6 175.7-101.3L480.8 234.3c6.5-11.1-2.2-25-15.1-24l-29.3 2.3L511.1 18.3c.6-1.5 .9-3.2 .9-4.8C512 6 506 0 498.5 0c-1.7 0-3.3 .3-4.8 .9zM192 192a128 128 0 1 1 0 256 128 128 0 1 1 0-256zm0 96a32 32 0 1 0 -64 0 32 32 0 1 0 64 0zm16 96a16 16 0 1 0 0-32 16 16 0 1 0 0 32z"]
+    };
   }
 });
 
-// .extend/output/server/nodes/5.js
-var __exports6 = {};
-__export(__exports6, {
-  component: () => component6,
-  fonts: () => fonts6,
-  imports: () => imports6,
-  index: () => index6,
-  stylesheets: () => stylesheets6
-});
-var index6, component_cache6, component6, imports6, stylesheets6, fonts6;
-var init__6 = __esm({
-  ".extend/output/server/nodes/5.js"() {
-    index6 = 5;
-    component6 = async () => component_cache6 ??= (await Promise.resolve().then(() => (init_page_svelte4(), page_svelte_exports4))).default;
-    imports6 = ["_app/immutable/nodes/5.dd45a451.js", "_app/immutable/chunks/scheduler.0d2f776c.js", "_app/immutable/chunks/index.e8a83480.js"];
-    stylesheets6 = ["_app/immutable/assets/5.fabadd85.css"];
-    fonts6 = [];
+// node_modules/.pnpm/@fortawesome+free-solid-svg-icons@6.5.1/node_modules/@fortawesome/free-solid-svg-icons/faCode.js
+var require_faCode = __commonJS({
+  "node_modules/.pnpm/@fortawesome+free-solid-svg-icons@6.5.1/node_modules/@fortawesome/free-solid-svg-icons/faCode.js"(exports) {
+    "use strict";
+    Object.defineProperty(exports, "__esModule", { value: true });
+    var prefix = "fas";
+    var iconName = "code";
+    var width = 640;
+    var height = 512;
+    var aliases = [];
+    var unicode = "f121";
+    var svgPathData = "M392.8 1.2c-17-4.9-34.7 5-39.6 22l-128 448c-4.9 17 5 34.7 22 39.6s34.7-5 39.6-22l128-448c4.9-17-5-34.7-22-39.6zm80.6 120.1c-12.5 12.5-12.5 32.8 0 45.3L562.7 256l-89.4 89.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0l112-112c12.5-12.5 12.5-32.8 0-45.3l-112-112c-12.5-12.5-32.8-12.5-45.3 0zm-306.7 0c-12.5-12.5-32.8-12.5-45.3 0l-112 112c-12.5 12.5-12.5 32.8 0 45.3l112 112c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L77.3 256l89.4-89.4c12.5-12.5 12.5-32.8 0-45.3z";
+    exports.definition = {
+      prefix,
+      iconName,
+      icon: [
+        width,
+        height,
+        aliases,
+        unicode,
+        svgPathData
+      ]
+    };
+    exports.faCode = exports.definition;
+    exports.prefix = prefix;
+    exports.iconName = iconName;
+    exports.width = width;
+    exports.height = height;
+    exports.ligatures = aliases;
+    exports.unicode = unicode;
+    exports.svgPathData = svgPathData;
+    exports.aliases = aliases;
   }
 });
 
-// node_modules/has-symbols/shams.js
+// node_modules/.pnpm/has-symbols@1.0.3/node_modules/has-symbols/shams.js
 var require_shams = __commonJS({
-  "node_modules/has-symbols/shams.js"(exports, module) {
+  "node_modules/.pnpm/has-symbols@1.0.3/node_modules/has-symbols/shams.js"(exports, module) {
     "use strict";
     module.exports = function hasSymbols() {
       if (typeof Symbol !== "function" || typeof Object.getOwnPropertySymbols !== "function") {
@@ -1294,9 +1770,9 @@ var require_shams = __commonJS({
   }
 });
 
-// node_modules/has-symbols/index.js
+// node_modules/.pnpm/has-symbols@1.0.3/node_modules/has-symbols/index.js
 var require_has_symbols = __commonJS({
-  "node_modules/has-symbols/index.js"(exports, module) {
+  "node_modules/.pnpm/has-symbols@1.0.3/node_modules/has-symbols/index.js"(exports, module) {
     "use strict";
     var origSymbol = typeof Symbol !== "undefined" && Symbol;
     var hasSymbolSham = require_shams();
@@ -1318,9 +1794,9 @@ var require_has_symbols = __commonJS({
   }
 });
 
-// node_modules/has-proto/index.js
+// node_modules/.pnpm/has-proto@1.0.1/node_modules/has-proto/index.js
 var require_has_proto = __commonJS({
-  "node_modules/has-proto/index.js"(exports, module) {
+  "node_modules/.pnpm/has-proto@1.0.1/node_modules/has-proto/index.js"(exports, module) {
     "use strict";
     var test = {
       foo: {}
@@ -1332,9 +1808,9 @@ var require_has_proto = __commonJS({
   }
 });
 
-// node_modules/function-bind/implementation.js
+// node_modules/.pnpm/function-bind@1.1.2/node_modules/function-bind/implementation.js
 var require_implementation = __commonJS({
-  "node_modules/function-bind/implementation.js"(exports, module) {
+  "node_modules/.pnpm/function-bind@1.1.2/node_modules/function-bind/implementation.js"(exports, module) {
     "use strict";
     var ERROR_MESSAGE = "Function.prototype.bind called on incompatible ";
     var toStr = Object.prototype.toString;
@@ -1408,18 +1884,18 @@ var require_implementation = __commonJS({
   }
 });
 
-// node_modules/function-bind/index.js
+// node_modules/.pnpm/function-bind@1.1.2/node_modules/function-bind/index.js
 var require_function_bind = __commonJS({
-  "node_modules/function-bind/index.js"(exports, module) {
+  "node_modules/.pnpm/function-bind@1.1.2/node_modules/function-bind/index.js"(exports, module) {
     "use strict";
     var implementation = require_implementation();
     module.exports = Function.prototype.bind || implementation;
   }
 });
 
-// node_modules/hasown/index.js
+// node_modules/.pnpm/hasown@2.0.0/node_modules/hasown/index.js
 var require_hasown = __commonJS({
-  "node_modules/hasown/index.js"(exports, module) {
+  "node_modules/.pnpm/hasown@2.0.0/node_modules/hasown/index.js"(exports, module) {
     "use strict";
     var call = Function.prototype.call;
     var $hasOwn = Object.prototype.hasOwnProperty;
@@ -1428,9 +1904,9 @@ var require_hasown = __commonJS({
   }
 });
 
-// node_modules/get-intrinsic/index.js
+// node_modules/.pnpm/get-intrinsic@1.2.2/node_modules/get-intrinsic/index.js
 var require_get_intrinsic = __commonJS({
-  "node_modules/get-intrinsic/index.js"(exports, module) {
+  "node_modules/.pnpm/get-intrinsic@1.2.2/node_modules/get-intrinsic/index.js"(exports, module) {
     "use strict";
     var undefined2;
     var $SyntaxError = SyntaxError;
@@ -1735,9 +2211,9 @@ var require_get_intrinsic = __commonJS({
   }
 });
 
-// node_modules/has-property-descriptors/index.js
+// node_modules/.pnpm/has-property-descriptors@1.0.1/node_modules/has-property-descriptors/index.js
 var require_has_property_descriptors = __commonJS({
-  "node_modules/has-property-descriptors/index.js"(exports, module) {
+  "node_modules/.pnpm/has-property-descriptors@1.0.1/node_modules/has-property-descriptors/index.js"(exports, module) {
     "use strict";
     var GetIntrinsic = require_get_intrinsic();
     var $defineProperty = GetIntrinsic("%Object.defineProperty%", true);
@@ -1766,9 +2242,9 @@ var require_has_property_descriptors = __commonJS({
   }
 });
 
-// node_modules/gopd/index.js
+// node_modules/.pnpm/gopd@1.0.1/node_modules/gopd/index.js
 var require_gopd = __commonJS({
-  "node_modules/gopd/index.js"(exports, module) {
+  "node_modules/.pnpm/gopd@1.0.1/node_modules/gopd/index.js"(exports, module) {
     "use strict";
     var GetIntrinsic = require_get_intrinsic();
     var $gOPD = GetIntrinsic("%Object.getOwnPropertyDescriptor%", true);
@@ -1783,9 +2259,9 @@ var require_gopd = __commonJS({
   }
 });
 
-// node_modules/define-data-property/index.js
+// node_modules/.pnpm/define-data-property@1.1.1/node_modules/define-data-property/index.js
 var require_define_data_property = __commonJS({
-  "node_modules/define-data-property/index.js"(exports, module) {
+  "node_modules/.pnpm/define-data-property@1.1.1/node_modules/define-data-property/index.js"(exports, module) {
     "use strict";
     var hasPropertyDescriptors = require_has_property_descriptors()();
     var GetIntrinsic = require_get_intrinsic();
@@ -1840,9 +2316,9 @@ var require_define_data_property = __commonJS({
   }
 });
 
-// node_modules/set-function-length/index.js
+// node_modules/.pnpm/set-function-length@1.1.1/node_modules/set-function-length/index.js
 var require_set_function_length = __commonJS({
-  "node_modules/set-function-length/index.js"(exports, module) {
+  "node_modules/.pnpm/set-function-length@1.1.1/node_modules/set-function-length/index.js"(exports, module) {
     "use strict";
     var GetIntrinsic = require_get_intrinsic();
     var define = require_define_data_property();
@@ -1881,9 +2357,9 @@ var require_set_function_length = __commonJS({
   }
 });
 
-// node_modules/call-bind/index.js
+// node_modules/.pnpm/call-bind@1.0.5/node_modules/call-bind/index.js
 var require_call_bind = __commonJS({
-  "node_modules/call-bind/index.js"(exports, module) {
+  "node_modules/.pnpm/call-bind@1.0.5/node_modules/call-bind/index.js"(exports, module) {
     "use strict";
     var bind = require_function_bind();
     var GetIntrinsic = require_get_intrinsic();
@@ -1923,9 +2399,9 @@ var require_call_bind = __commonJS({
   }
 });
 
-// node_modules/call-bind/callBound.js
+// node_modules/.pnpm/call-bind@1.0.5/node_modules/call-bind/callBound.js
 var require_callBound = __commonJS({
-  "node_modules/call-bind/callBound.js"(exports, module) {
+  "node_modules/.pnpm/call-bind@1.0.5/node_modules/call-bind/callBound.js"(exports, module) {
     "use strict";
     var GetIntrinsic = require_get_intrinsic();
     var callBind = require_call_bind();
@@ -1940,15 +2416,15 @@ var require_callBound = __commonJS({
   }
 });
 
-// (disabled):node_modules/object-inspect/util.inspect
+// (disabled):node_modules/.pnpm/object-inspect@1.13.1/node_modules/object-inspect/util.inspect
 var require_util = __commonJS({
-  "(disabled):node_modules/object-inspect/util.inspect"() {
+  "(disabled):node_modules/.pnpm/object-inspect@1.13.1/node_modules/object-inspect/util.inspect"() {
   }
 });
 
-// node_modules/object-inspect/index.js
+// node_modules/.pnpm/object-inspect@1.13.1/node_modules/object-inspect/index.js
 var require_object_inspect = __commonJS({
-  "node_modules/object-inspect/index.js"(exports, module) {
+  "node_modules/.pnpm/object-inspect@1.13.1/node_modules/object-inspect/index.js"(exports, module) {
     var hasMap = typeof Map === "function" && Map.prototype;
     var mapSizeDescriptor = Object.getOwnPropertyDescriptor && hasMap ? Object.getOwnPropertyDescriptor(Map.prototype, "size") : null;
     var mapSize = hasMap && mapSizeDescriptor && typeof mapSizeDescriptor.get === "function" ? mapSizeDescriptor.get : null;
@@ -2384,9 +2860,9 @@ var require_object_inspect = __commonJS({
     function weakCollectionOf(type) {
       return type + " { ? }";
     }
-    function collectionOf(type, size, entries, indent) {
+    function collectionOf(type, size2, entries, indent) {
       var joinedEntries = indent ? indentedJoin(entries, indent) : $join.call(entries, ", ");
-      return type + " (" + size + ") {" + joinedEntries + "}";
+      return type + " (" + size2 + ") {" + joinedEntries + "}";
     }
     function singleLineValues(xs) {
       for (var i2 = 0; i2 < xs.length; i2++) {
@@ -2461,9 +2937,9 @@ var require_object_inspect = __commonJS({
   }
 });
 
-// node_modules/side-channel/index.js
+// node_modules/.pnpm/side-channel@1.0.4/node_modules/side-channel/index.js
 var require_side_channel = __commonJS({
-  "node_modules/side-channel/index.js"(exports, module) {
+  "node_modules/.pnpm/side-channel@1.0.4/node_modules/side-channel/index.js"(exports, module) {
     "use strict";
     var GetIntrinsic = require_get_intrinsic();
     var callBound = require_callBound();
@@ -2572,9 +3048,9 @@ var require_side_channel = __commonJS({
   }
 });
 
-// node_modules/qs/lib/formats.js
+// node_modules/.pnpm/qs@6.11.2/node_modules/qs/lib/formats.js
 var require_formats = __commonJS({
-  "node_modules/qs/lib/formats.js"(exports, module) {
+  "node_modules/.pnpm/qs@6.11.2/node_modules/qs/lib/formats.js"(exports, module) {
     "use strict";
     var replace = String.prototype.replace;
     var percentTwenties = /%20/g;
@@ -2598,9 +3074,9 @@ var require_formats = __commonJS({
   }
 });
 
-// node_modules/qs/lib/utils.js
+// node_modules/.pnpm/qs@6.11.2/node_modules/qs/lib/utils.js
 var require_utils = __commonJS({
-  "node_modules/qs/lib/utils.js"(exports, module) {
+  "node_modules/.pnpm/qs@6.11.2/node_modules/qs/lib/utils.js"(exports, module) {
     "use strict";
     var formats = require_formats();
     var has = Object.prototype.hasOwnProperty;
@@ -2797,9 +3273,9 @@ var require_utils = __commonJS({
   }
 });
 
-// node_modules/qs/lib/stringify.js
+// node_modules/.pnpm/qs@6.11.2/node_modules/qs/lib/stringify.js
 var require_stringify = __commonJS({
-  "node_modules/qs/lib/stringify.js"(exports, module) {
+  "node_modules/.pnpm/qs@6.11.2/node_modules/qs/lib/stringify.js"(exports, module) {
     "use strict";
     var getSideChannel = require_side_channel();
     var utils = require_utils();
@@ -3054,9 +3530,9 @@ var require_stringify = __commonJS({
   }
 });
 
-// node_modules/qs/lib/parse.js
+// node_modules/.pnpm/qs@6.11.2/node_modules/qs/lib/parse.js
 var require_parse = __commonJS({
-  "node_modules/qs/lib/parse.js"(exports, module) {
+  "node_modules/.pnpm/qs@6.11.2/node_modules/qs/lib/parse.js"(exports, module) {
     "use strict";
     var utils = require_utils();
     var has = Object.prototype.hasOwnProperty;
@@ -3157,12 +3633,12 @@ var require_parse = __commonJS({
         } else {
           obj = options2.plainObjects ? /* @__PURE__ */ Object.create(null) : {};
           var cleanRoot = root.charAt(0) === "[" && root.charAt(root.length - 1) === "]" ? root.slice(1, -1) : root;
-          var index9 = parseInt(cleanRoot, 10);
+          var index7 = parseInt(cleanRoot, 10);
           if (!options2.parseArrays && cleanRoot === "") {
             obj = { 0: leaf };
-          } else if (!isNaN(index9) && root !== cleanRoot && String(index9) === cleanRoot && index9 >= 0 && (options2.parseArrays && index9 <= options2.arrayLimit)) {
+          } else if (!isNaN(index7) && root !== cleanRoot && String(index7) === cleanRoot && index7 >= 0 && (options2.parseArrays && index7 <= options2.arrayLimit)) {
             obj = [];
-            obj[index9] = leaf;
+            obj[index7] = leaf;
           } else if (cleanRoot !== "__proto__") {
             obj[cleanRoot] = leaf;
           }
@@ -3256,9 +3732,9 @@ var require_parse = __commonJS({
   }
 });
 
-// node_modules/qs/lib/index.js
+// node_modules/.pnpm/qs@6.11.2/node_modules/qs/lib/index.js
 var require_lib = __commonJS({
-  "node_modules/qs/lib/index.js"(exports, module) {
+  "node_modules/.pnpm/qs@6.11.2/node_modules/qs/lib/index.js"(exports, module) {
     "use strict";
     var stringify2 = require_stringify();
     var parse3 = require_parse();
@@ -3271,9 +3747,9 @@ var require_lib = __commonJS({
   }
 });
 
-// node_modules/cross-fetch/dist/browser-ponyfill.js
+// node_modules/.pnpm/cross-fetch@3.1.8_encoding@0.1.13/node_modules/cross-fetch/dist/browser-ponyfill.js
 var require_browser_ponyfill = __commonJS({
-  "node_modules/cross-fetch/dist/browser-ponyfill.js"(exports, module) {
+  "node_modules/.pnpm/cross-fetch@3.1.8_encoding@0.1.13/node_modules/cross-fetch/dist/browser-ponyfill.js"(exports, module) {
     var global2 = typeof self !== "undefined" ? self : exports;
     var __self__ = function() {
       function F() {
@@ -3347,19 +3823,19 @@ var require_browser_ponyfill = __commonJS({
           }
           return iterator;
         }
-        function Headers2(headers) {
+        function Headers2(headers2) {
           this.map = {};
-          if (headers instanceof Headers2) {
-            headers.forEach(function(value, name) {
+          if (headers2 instanceof Headers2) {
+            headers2.forEach(function(value, name) {
               this.append(name, value);
             }, this);
-          } else if (Array.isArray(headers)) {
-            headers.forEach(function(header) {
+          } else if (Array.isArray(headers2)) {
+            headers2.forEach(function(header) {
               this.append(header[0], header[1]);
             }, this);
-          } else if (headers) {
-            Object.getOwnPropertyNames(headers).forEach(function(name) {
-              this.append(name, headers[name]);
+          } else if (headers2) {
+            Object.getOwnPropertyNames(headers2).forEach(function(name) {
+              this.append(name, headers2[name]);
             }, this);
           }
         }
@@ -3413,16 +3889,16 @@ var require_browser_ponyfill = __commonJS({
         if (support.iterable) {
           Headers2.prototype[Symbol.iterator] = Headers2.prototype.entries;
         }
-        function consumed(body) {
-          if (body.bodyUsed) {
+        function consumed(body2) {
+          if (body2.bodyUsed) {
             return Promise.reject(new TypeError("Already read"));
           }
-          body.bodyUsed = true;
+          body2.bodyUsed = true;
         }
         function fileReaderReady(reader) {
-          return new Promise(function(resolve, reject) {
+          return new Promise(function(resolve2, reject) {
             reader.onload = function() {
-              resolve(reader.result);
+              resolve2(reader.result);
             };
             reader.onerror = function() {
               reject(reader.error);
@@ -3460,32 +3936,32 @@ var require_browser_ponyfill = __commonJS({
         }
         function Body() {
           this.bodyUsed = false;
-          this._initBody = function(body) {
-            this._bodyInit = body;
-            if (!body) {
+          this._initBody = function(body2) {
+            this._bodyInit = body2;
+            if (!body2) {
               this._bodyText = "";
-            } else if (typeof body === "string") {
-              this._bodyText = body;
-            } else if (support.blob && Blob.prototype.isPrototypeOf(body)) {
-              this._bodyBlob = body;
-            } else if (support.formData && FormData.prototype.isPrototypeOf(body)) {
-              this._bodyFormData = body;
-            } else if (support.searchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
-              this._bodyText = body.toString();
-            } else if (support.arrayBuffer && support.blob && isDataView(body)) {
-              this._bodyArrayBuffer = bufferClone(body.buffer);
+            } else if (typeof body2 === "string") {
+              this._bodyText = body2;
+            } else if (support.blob && Blob.prototype.isPrototypeOf(body2)) {
+              this._bodyBlob = body2;
+            } else if (support.formData && FormData.prototype.isPrototypeOf(body2)) {
+              this._bodyFormData = body2;
+            } else if (support.searchParams && URLSearchParams.prototype.isPrototypeOf(body2)) {
+              this._bodyText = body2.toString();
+            } else if (support.arrayBuffer && support.blob && isDataView(body2)) {
+              this._bodyArrayBuffer = bufferClone(body2.buffer);
               this._bodyInit = new Blob([this._bodyArrayBuffer]);
-            } else if (support.arrayBuffer && (ArrayBuffer.prototype.isPrototypeOf(body) || isArrayBufferView(body))) {
-              this._bodyArrayBuffer = bufferClone(body);
+            } else if (support.arrayBuffer && (ArrayBuffer.prototype.isPrototypeOf(body2) || isArrayBufferView(body2))) {
+              this._bodyArrayBuffer = bufferClone(body2);
             } else {
-              this._bodyText = body = Object.prototype.toString.call(body);
+              this._bodyText = body2 = Object.prototype.toString.call(body2);
             }
             if (!this.headers.get("content-type")) {
-              if (typeof body === "string") {
+              if (typeof body2 === "string") {
                 this.headers.set("content-type", "text/plain;charset=UTF-8");
               } else if (this._bodyBlob && this._bodyBlob.type) {
                 this.headers.set("content-type", this._bodyBlob.type);
-              } else if (support.searchParams && URLSearchParams.prototype.isPrototypeOf(body)) {
+              } else if (support.searchParams && URLSearchParams.prototype.isPrototypeOf(body2)) {
                 this.headers.set("content-type", "application/x-www-form-urlencoded;charset=UTF-8");
               }
             }
@@ -3546,7 +4022,7 @@ var require_browser_ponyfill = __commonJS({
         }
         function Request2(input, options2) {
           options2 = options2 || {};
-          var body = options2.body;
+          var body2 = options2.body;
           if (input instanceof Request2) {
             if (input.bodyUsed) {
               throw new TypeError("Already read");
@@ -3559,8 +4035,8 @@ var require_browser_ponyfill = __commonJS({
             this.method = input.method;
             this.mode = input.mode;
             this.signal = input.signal;
-            if (!body && input._bodyInit != null) {
-              body = input._bodyInit;
+            if (!body2 && input._bodyInit != null) {
+              body2 = input._bodyInit;
               input.bodyUsed = true;
             }
           } else {
@@ -3574,17 +4050,17 @@ var require_browser_ponyfill = __commonJS({
           this.mode = options2.mode || this.mode || null;
           this.signal = options2.signal || this.signal;
           this.referrer = null;
-          if ((this.method === "GET" || this.method === "HEAD") && body) {
+          if ((this.method === "GET" || this.method === "HEAD") && body2) {
             throw new TypeError("Body not allowed for GET or HEAD requests");
           }
-          this._initBody(body);
+          this._initBody(body2);
         }
         Request2.prototype.clone = function() {
           return new Request2(this, { body: this._bodyInit });
         };
-        function decode(body) {
+        function decode(body2) {
           var form = new FormData();
-          body.trim().split("&").forEach(function(bytes) {
+          body2.trim().split("&").forEach(function(bytes) {
             if (bytes) {
               var split = bytes.split("=");
               var name = split.shift().replace(/\+/g, " ");
@@ -3595,17 +4071,17 @@ var require_browser_ponyfill = __commonJS({
           return form;
         }
         function parseHeaders(rawHeaders) {
-          var headers = new Headers2();
+          var headers2 = new Headers2();
           var preProcessedHeaders = rawHeaders.replace(/\r?\n[\t ]+/g, " ");
           preProcessedHeaders.split(/\r?\n/).forEach(function(line) {
             var parts = line.split(":");
             var key2 = parts.shift().trim();
             if (key2) {
               var value = parts.join(":").trim();
-              headers.append(key2, value);
+              headers2.append(key2, value);
             }
           });
-          return headers;
+          return headers2;
         }
         Body.call(Request2.prototype);
         function Response2(bodyInit, options2) {
@@ -3648,14 +4124,14 @@ var require_browser_ponyfill = __commonJS({
           exports2.DOMException = function(message, name) {
             this.message = message;
             this.name = name;
-            var error2 = Error(message);
-            this.stack = error2.stack;
+            var error = Error(message);
+            this.stack = error.stack;
           };
           exports2.DOMException.prototype = Object.create(Error.prototype);
           exports2.DOMException.prototype.constructor = exports2.DOMException;
         }
         function fetch2(input, init2) {
-          return new Promise(function(resolve, reject) {
+          return new Promise(function(resolve2, reject) {
             var request = new Request2(input, init2);
             if (request.signal && request.signal.aborted) {
               return reject(new exports2.DOMException("Aborted", "AbortError"));
@@ -3671,8 +4147,8 @@ var require_browser_ponyfill = __commonJS({
                 headers: parseHeaders(xhr.getAllResponseHeaders() || "")
               };
               options2.url = "responseURL" in xhr ? xhr.responseURL : options2.headers.get("X-Request-URL");
-              var body = "response" in xhr ? xhr.response : xhr.responseText;
-              resolve(new Response2(body, options2));
+              var body2 = "response" in xhr ? xhr.response : xhr.responseText;
+              resolve2(new Response2(body2, options2));
             };
             xhr.onerror = function() {
               reject(new TypeError("Network request failed"));
@@ -3734,9 +4210,9 @@ var require_browser_ponyfill = __commonJS({
   }
 });
 
-// node_modules/retry/lib/retry_operation.js
+// node_modules/.pnpm/retry@0.13.1/node_modules/retry/lib/retry_operation.js
 var require_retry_operation = __commonJS({
-  "node_modules/retry/lib/retry_operation.js"(exports, module) {
+  "node_modules/.pnpm/retry@0.13.1/node_modules/retry/lib/retry_operation.js"(exports, module) {
     function RetryOperation(timeouts, options2) {
       if (typeof options2 === "boolean") {
         options2 = { forever: options2 };
@@ -3855,12 +4331,12 @@ var require_retry_operation = __commonJS({
       var mainError = null;
       var mainErrorCount = 0;
       for (var i2 = 0; i2 < this._errors.length; i2++) {
-        var error2 = this._errors[i2];
-        var message = error2.message;
+        var error = this._errors[i2];
+        var message = error.message;
         var count = (counts[message] || 0) + 1;
         counts[message] = count;
         if (count >= mainErrorCount) {
-          mainError = error2;
+          mainError = error;
           mainErrorCount = count;
         }
       }
@@ -3869,9 +4345,9 @@ var require_retry_operation = __commonJS({
   }
 });
 
-// node_modules/retry/lib/retry.js
+// node_modules/.pnpm/retry@0.13.1/node_modules/retry/lib/retry.js
 var require_retry = __commonJS({
-  "node_modules/retry/lib/retry.js"(exports) {
+  "node_modules/.pnpm/retry@0.13.1/node_modules/retry/lib/retry.js"(exports) {
     var RetryOperation = require_retry_operation();
     exports.operation = function(options2) {
       var timeouts = exports.timeouts(options2);
@@ -3955,19 +4431,19 @@ var require_retry = __commonJS({
   }
 });
 
-// node_modules/retry/index.js
+// node_modules/.pnpm/retry@0.13.1/node_modules/retry/index.js
 var require_retry2 = __commonJS({
-  "node_modules/retry/index.js"(exports, module) {
+  "node_modules/.pnpm/retry@0.13.1/node_modules/retry/index.js"(exports, module) {
     module.exports = require_retry();
   }
 });
 
-// node_modules/async-retry/lib/index.js
+// node_modules/.pnpm/async-retry@1.3.3/node_modules/async-retry/lib/index.js
 var require_lib2 = __commonJS({
-  "node_modules/async-retry/lib/index.js"(exports, module) {
+  "node_modules/.pnpm/async-retry@1.3.3/node_modules/async-retry/lib/index.js"(exports, module) {
     var retrier = require_retry2();
     function retry(fn, opts) {
-      function run2(resolve, reject) {
+      function run2(resolve2, reject) {
         var options2 = opts || {};
         var op;
         if (!("randomize" in options2)) {
@@ -3996,7 +4472,7 @@ var require_lib2 = __commonJS({
             onError(err, num);
             return;
           }
-          Promise.resolve(val).then(resolve).catch(function catchIt(err) {
+          Promise.resolve(val).then(resolve2).catch(function catchIt(err) {
             onError(err, num);
           });
         }
@@ -4008,7 +4484,7 @@ var require_lib2 = __commonJS({
   }
 });
 
-// node_modules/microcms-js-sdk/dist/esm/microcms-js-sdk.js
+// node_modules/.pnpm/microcms-js-sdk@2.7.0/node_modules/microcms-js-sdk/dist/esm/microcms-js-sdk.js
 function e(e3, t3) {
   if (t3 == null || t3 > e3.length)
     t3 = e3.length;
@@ -4201,7 +4677,7 @@ function p(e3, t3) {
 }
 var import_qs, import_cross_fetch, import_async_retry, y, v, m, b, w, I, j, P, E;
 var init_microcms_js_sdk = __esm({
-  "node_modules/microcms-js-sdk/dist/esm/microcms-js-sdk.js"() {
+  "node_modules/.pnpm/microcms-js-sdk@2.7.0/node_modules/microcms-js-sdk/dist/esm/microcms-js-sdk.js"() {
     import_qs = __toESM(require_lib());
     import_cross_fetch = __toESM(require_browser_ponyfill());
     import_async_retry = __toESM(require_lib2());
@@ -4579,8 +5055,8 @@ var init_microcms_js_sdk = __esm({
 
 // .extend/output/server/chunks/cms.js
 var cms_domain, cms_key;
-var init_works = __esm({
-  ".extend/output/server/chunks/works.js"() {
+var init_cms = __esm({
+  ".extend/output/server/chunks/cms.js"() {
     init_microcms_js_sdk();
     cms_domain = "hideko-portfolio";
     cms_key = "kPoCoA2uzNa4uQOSUgjOfvf2SCsxCwlej5MJ";
@@ -4591,111 +5067,339 @@ var init_works = __esm({
   }
 });
 
-// .extend/output/server/entries/pages/works/_page.svelte.js
-var page_svelte_exports5 = {};
-__export(page_svelte_exports5, {
-  default: () => Page5
+// .extend/output/server/entries/pages/index/_page.svelte.js
+var page_svelte_exports = {};
+__export(page_svelte_exports, {
+  default: () => Page
 });
-function getYear(dateString) {
-  const date = new Date(dateString);
-  return date.getFullYear();
-}
-function getYearDifference(dateString, createdDateString) {
-  const date = new Date(dateString);
-  const createdDate = new Date(createdDateString);
-  const timeDifference = date - createdDate;
-  const daysDifference = Math.floor(timeDifference / (1e3 * 60 * 60 * 24));
-  const yearsDifference = Math.floor(daysDifference / 365);
-  if (yearsDifference < 1) {
-    return daysDifference + "d ago";
-  } else {
-    return yearsDifference + "y ago";
-  }
-}
-var css5, Page5;
-var init_page_svelte5 = __esm({
-  ".extend/output/server/entries/pages/works/_page.svelte.js"() {
+var import_faCode, catIcon, css$52, About, techState, techOverlay, css$42, TechBar, css$32, TechOverlay, css$22, TechItems, css$12, Tech, css4, Page;
+var init_page_svelte = __esm({
+  ".extend/output/server/entries/pages/index/_page.svelte.js"() {
     init_ssr();
-    init_works();
-    css5 = {
-      code: "section.svelte-1rrgy8n{display:flex;align-items:center;justify-content:center}.contents.svelte-1rrgy8n{width:30rem;min-height:100vh;margin-top:7rem}.titles.svelte-1rrgy8n{display:flex;align-items:center;color:var(--text-thin);padding-inline:0.6rem;margin-bottom:0.3rem;font-family:'Roboto Mono Variable', sans-serif;font-size:14px\r\n    }.date.svelte-1rrgy8n{padding-right:1.8rem\r\n    }.ago.svelte-1rrgy8n{margin:0 0 0 auto}.content.svelte-1rrgy8n{display:flex;align-items:center;height:2.3rem;padding-inline:0.6rem;border-top:1px solid var(--little);font-family:'Roboto Mono Variable', sans-serif;font-weight:400;font-size:14px;transition:all 0.2s;cursor:pointer;text-decoration:none;color:var(--text)\r\n    }.y.svelte-1rrgy8n{padding-right:1.9rem}.t.svelte-1rrgy8n{width:10rem;white-space:nowrap;overflow:hidden}.a.svelte-1rrgy8n{margin:0 0 0 auto}.content.svelte-1rrgy8n:hover{background:var(--border)}@media(max-width: 600px){.contents.svelte-1rrgy8n{width:20rem}}",
+    init_pageTitle();
+    init_chunks();
+    init_fa();
+    init_free_solid_svg_icons();
+    import_faCode = __toESM(require_faCode(), 1);
+    init_cms();
+    catIcon = "/_svelte/immutable/assets/cat.dd7b11e1.webp";
+    css$52 = {
+      code: '.bios.svelte-16zd51t{margin:0 auto;width:35rem}.bio.svelte-16zd51t{margin-top:15px}.img.svelte-16zd51t{border-radius:100%}img.svelte-16zd51t{float:right;margin-left:2rem;margin-bottom:1rem;border-radius:100%;border:1px solid var(--border);aspect-ratio:1 / 1;height:130px;width:130px;-o-object-fit:cover;object-fit:cover}a.svelte-16zd51t{text-decoration:none;color:var(--text);position:relative}a.svelte-16zd51t:after{content:"";position:absolute;left:0;bottom:-1px;width:100%;height:1px;background:var(--little);transition:all 0.2s}a.svelte-16zd51t:hover::after{background:var(--text)}@media(max-width: 700px){.title.svelte-16zd51t{margin-left:10%}.bios.svelte-16zd51t{width:80%}img.svelte-16zd51t{float:none;height:180px;width:180px}.img.svelte-16zd51t{margin-top:1rem;display:flex;align-items:center;justify-content:center}}',
       map: null
     };
-    Page5 = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      let data = [];
-      $$result.css.add(css5);
-      return `${$$result.head += `<!-- HEAD_svelte-h4ubwq_START -->${$$result.title = `<title>Works - Hideko Portfolio</title>`, ""}<!-- HEAD_svelte-h4ubwq_END -->`, ""} <section class="svelte-1rrgy8n"><div class="contents svelte-1rrgy8n"><div class="titles svelte-1rrgy8n" data-svelte-h="svelte-1teptle"><p class="date svelte-1rrgy8n">date</p> <p class="title">title</p> <p class="ago svelte-1rrgy8n">ago</p></div> ${each(data, (c3) => {
-        return `<a class="content svelte-1rrgy8n" href="${"works/" + escape2(c3.id, true)}"><p class="y svelte-1rrgy8n">${escape2(getYear(c3.publishedAt))}</p> <p class="t svelte-1rrgy8n">${escape2(c3.title)}</p> <p class="a svelte-1rrgy8n">${escape2(getYearDifference(/* @__PURE__ */ new Date(), c3.publishedAt))}</p> </a>`;
+    About = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      $$result.css.add(css$52);
+      return `<section><div class="title svelte-16zd51t">${validate_component(PageTitle, "PageTitle").$$render($$result, { title: "About" }, {}, {})}</div> <div class="bios svelte-16zd51t" data-svelte-h="svelte-19qlliy"><div class="img svelte-16zd51t"><img${add_attribute("src", catIcon, 0)} alt="icon" class="svelte-16zd51t"></div> <div class="bio svelte-16zd51t">I am a front end developer. I can do backend and software as well as frontend. Not only that, I release various projects as open source.
+            <br><br>
+            When I was very young, I fell in love with Minecraft and wanted to create plug-ins and mods from it. From there I worked hard to buy a computer and suddenly started learning Java.
+            <br><br>
+            I said I was learning Java out of the blue, and I didn&#39;t do any research to make sure I was doing it right.
+            <br><br>
+            After that I stopped programming for about two years, and after that I suddenly wanted to do front-end development.
+            <br><br>
+            In the beginning, we created a simple static site with only HTML, CSS, and JavaScript. From there, I became interested in React and learned about it, and then Next.js.
+            <br><br>
+            From there, I fell in love with JavaScript and started back-end development with Nodejs, and have done many other things. At first I created a portfolio with React, but I failed many times.
+            <br><br>
+            That&#39;s when I came across Svelte, which I felt was the framework that best suited me, and from there I created
+            <a href="https://v1.hideko.cf" class="svelte-16zd51t">Portfolio v1</a>. This was also a failure, but from there I went through a lot of trial and error and eventually created <a href="https://hideko.cf" class="svelte-16zd51t">Portfolio v5</a>.
+            <br><br>
+            We developed not only the front end but also the back end, including <a href="https://github.com/hideko-dev/thundis" class="svelte-16zd51t">Thundis</a>, <a href="https://github.com/hideko-dev/discord-cdn-deliver" class="svelte-16zd51t">discord-cdn-deliver</a>, <a href="https://github.com/hideko-dev/Mod-Us" class="svelte-16zd51t">ModUs</a> and <a href="https://github.com/hideko-dev/meteor" class="svelte-16zd51t">Meteor</a> using Electron. From there, I worked on the front-end development of
+            <a href="https://github.com/yukieiji/ExtremeRoles" class="svelte-16zd51t">yukieiji&#39;s ExtremeRoles</a> to learn a great deal about Git, including Branches, Issues, Pull Requests, and Git Command. Docs, etc. I was involved in the development of ExtremeRoles.
+            <br><br>
+            Other projects we have developed include <a href="https://github.com/yukieiji/ExtremeRoles.Docs" class="svelte-16zd51t">ExtremeRoles.Docs</a>,
+            <a href="https://github.com/hideko-dev/ExtremeRoles.Web" class="svelte-16zd51t">ExtremeRoles.Web</a> and a dedicated server match system in ExtremeRoles.</div></div> </section>`;
+    });
+    techState = writable(0);
+    techOverlay = writable({
+      status: false,
+      text: "",
+      web: "",
+      state: ""
+    });
+    css$42 = {
+      code: "section.svelte-cjgpg2{display:flex;align-items:center;justify-content:center;width:9rem;height:1.95rem;border:1px solid var(--border);border-radius:6px;padding:2px;cursor:pointer;font-size:15px;font-family:'Inter', sans-serif}.titles.svelte-cjgpg2{display:flex;align-items:center;justify-content:center;width:100%;height:100%;position:relative;-webkit-user-select:none;-moz-user-select:none;user-select:none}.menuBox.svelte-cjgpg2{display:flex;align-items:center;color:var(--thin);gap:4px;height:1.7rem;width:8.2rem;font-size:14px;padding:5px;border-radius:3px;transition:all 0.2s}.menuBox.svelte-cjgpg2:hover{background:var(--btn-thin)\r\n    }.menu.svelte-cjgpg2{position:absolute;left:-2px;top:30px;background:rgba(var(--bg-rgb), 0.8);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid var(--border);width:9rem;height:8em;border-radius:6px;z-index:100;transform-origin:center top;transition:all 0.15s;padding-block:5px;display:grid;place-items:center;box-shadow:0 0 10px 0 rgba(0, 0, 0, 0.1)}.title.svelte-cjgpg2{font-size:14px;display:flex;align-items:center;gap:5px;margin-left:8px;color:var(--thin);width:100%;height:100%}svg.svelte-cjgpg2{margin:0 10px 0 auto;transition:all 0.3s}",
+      map: null
+    };
+    TechBar = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let $techState, $$unsubscribe_techState;
+      $$unsubscribe_techState = subscribe(techState, (value) => $techState = value);
+      let menuStyle = "scale: 0.92; opacity: 0; pointer-events: none";
+      let sectionRef;
+      const checkMark = `<svg style="margin: 0 2px 0 auto" width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="ml-auto h-4 w-4 opacity-100"><path d="M11.4669 3.72684C11.7558 3.91574 11.8369 4.30308 11.648 4.59198L7.39799 11.092C7.29783 11.2452 7.13556 11.3467 6.95402 11.3699C6.77247 11.3931 6.58989 11.3355 6.45446 11.2124L3.70446 8.71241C3.44905 8.48022 3.43023 8.08494 3.66242 7.82953C3.89461 7.57412 4.28989 7.55529 4.5453 7.78749L6.75292 9.79441L10.6018 3.90792C10.7907 3.61902 11.178 3.53795 11.4669 3.72684Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"></path></svg>`;
+      const menus = [
+        { icon: import_faCode.faCode, text: "Language", state: 0 },
+        { icon: faPlug, text: "Library", state: 1 },
+        {
+          icon: faMeteor,
+          text: "Framework",
+          state: 2
+        },
+        {
+          icon: faMicrochip,
+          text: "Technology",
+          state: 3
+        }
+      ];
+      $$result.css.add(css$42);
+      $$unsubscribe_techState();
+      return `<section class="svelte-cjgpg2"${add_attribute("this", sectionRef, 0)}><div class="titles svelte-cjgpg2"><div class="title svelte-cjgpg2">${validate_component(Fa$1, "Fa").$$render(
+        $$result,
+        {
+          icon: menus[$techState].icon,
+          color: "var(--thin)",
+          fw: true
+        },
+        {},
+        {}
+      )} <p>${escape2(menus[$techState].text)}</p></div> <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" class="ml-auto h-4 w-4 shrink-0 opacity-50 svelte-cjgpg2"><path d="M4.93179 5.43179C4.75605 5.60753 4.75605 5.89245 4.93179 6.06819C5.10753 6.24392 5.39245 6.24392 5.56819 6.06819L7.49999 4.13638L9.43179 6.06819C9.60753 6.24392 9.89245 6.24392 10.0682 6.06819C10.2439 5.89245 10.2439 5.60753 10.0682 5.43179L7.81819 3.18179C7.73379 3.0974 7.61933 3.04999 7.49999 3.04999C7.38064 3.04999 7.26618 3.0974 7.18179 3.18179L4.93179 5.43179ZM10.0682 9.56819C10.2439 9.39245 10.2439 9.10753 10.0682 8.93179C9.89245 8.75606 9.60753 8.75606 9.43179 8.93179L7.49999 10.8636L5.56819 8.93179C5.39245 8.75606 5.10753 8.75606 4.93179 8.93179C4.75605 9.10753 4.75605 9.39245 4.93179 9.56819L7.18179 11.8182C7.35753 11.9939 7.64245 11.9939 7.81819 11.8182L10.0682 9.56819Z" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"></path></svg> <div class="menu svelte-cjgpg2"${add_attribute("style", menuStyle, 0)}>${each(menus, (menu) => {
+        return `<div class="menuBox svelte-cjgpg2">${validate_component(Fa$1, "Fa").$$render($$result, { icon: menu.icon, fw: true }, {}, {})} <p>${escape2(menu.text)}</p> ${$techState === menu.state ? `<!-- HTML_TAG_START -->${checkMark}<!-- HTML_TAG_END -->` : ``} </div>`;
+      })}</div></div> </section>`;
+    });
+    css$32 = {
+      code: "section.svelte-1fnak7q{position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(var(--bg-rgb), 0.7);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);z-index:999;display:flex;align-items:center;justify-content:center;transition:all 0.2s}.box.svelte-1fnak7q{width:20rem;height:7rem;border-radius:10px;border:1px solid var(--outline);box-shadow:0 0 15px 0 rgba(0, 0, 0, 0.05);background:var(--bg);transform-origin:bottom center;transition:all 0.3s;padding:1rem;font-family:'Inter', sans-serif}.title.svelte-1fnak7q{font-size:18px;font-weight:600;margin-bottom:12px}.line.svelte-1fnak7q{display:flex;align-items:center;gap:8px;margin-block:5px}.name.svelte-1fnak7q{background:var(--outline);padding-inline:5px;padding-block:1px;border-radius:4px;font-size:12px}.context.svelte-1fnak7q{overflow:hidden;width:100%;white-space:nowrap;text-overflow:ellipsis;font-size:15px;text-decoration:none;color:var(--text);transition:all 0.2s}.context.svelte-1fnak7q:hover{color:var(--thin)\r\n    }",
+      map: null
+    };
+    TechOverlay = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let $techOverlay, $$unsubscribe_techOverlay;
+      $$unsubscribe_techOverlay = subscribe(techOverlay, (value) => $techOverlay = value);
+      let style = "opacity: 0; pointer-events: none";
+      let boxStyle = "scale: 0.95";
+      let lines = [];
+      $$result.css.add(css$32);
+      {
+        {
+          if ($techOverlay.status) {
+            style = "opacity: 1; pointer-events: all";
+            boxStyle = "opacity: 1; scale: 1";
+          } else {
+            style = "opacity: 0; pointer-events: none";
+            boxStyle = "opacity: 0; scale: 0.95";
+          }
+          lines = [
+            {
+              name: "Ability",
+              context: $techOverlay.state
+            },
+            {
+              name: "Web",
+              context: $techOverlay.web,
+              href: $techOverlay.web
+            }
+          ];
+        }
+      }
+      $$unsubscribe_techOverlay();
+      return `<section${add_attribute("style", style, 0)} class="svelte-1fnak7q"><div class="box svelte-1fnak7q"${add_attribute("style", boxStyle, 0)}><p class="title svelte-1fnak7q">${escape2($techOverlay.text)}</p> ${each(lines, (c3) => {
+        return `<div class="line svelte-1fnak7q"><p class="name svelte-1fnak7q">${escape2(c3.name)}</p> <a class="context svelte-1fnak7q"${add_attribute("href", c3.href, 0)}>${escape2(c3.context)}</a> </div>`;
       })}</div> </section>`;
     });
-  }
-});
-
-// .extend/output/server/nodes/6.js
-var __exports7 = {};
-__export(__exports7, {
-  component: () => component7,
-  fonts: () => fonts7,
-  imports: () => imports7,
-  index: () => index7,
-  stylesheets: () => stylesheets7
-});
-var index7, component_cache7, component7, imports7, stylesheets7, fonts7;
-var init__7 = __esm({
-  ".extend/output/server/nodes/6.js"() {
-    index7 = 6;
-    component7 = async () => component_cache7 ??= (await Promise.resolve().then(() => (init_page_svelte5(), page_svelte_exports5))).default;
-    imports7 = ["_app/immutable/nodes/6.5ec2bc39.js", "_app/immutable/chunks/scheduler.0d2f776c.js", "_app/immutable/chunks/index.e8a83480.js", "_app/immutable/chunks/each.e59479a4.js", "_app/immutable/chunks/works.daa1dc1c.js"];
-    stylesheets7 = ["_app/immutable/assets/6.801780bf.css"];
-    fonts7 = [];
-  }
-});
-
-// .extend/output/server/entries/pages/works/_id_/_page.svelte.js
-var page_svelte_exports6 = {};
-__export(page_svelte_exports6, {
-  default: () => Page6
-});
-var css6, Page6;
-var init_page_svelte6 = __esm({
-  ".extend/output/server/entries/pages/works/_id_/_page.svelte.js"() {
-    init_ssr();
-    init_stores();
-    init_works();
-    css6 = {
-      code: `section.svelte-r17fbq.svelte-r17fbq{display:flex;align-items:center;justify-content:center}.contents.svelte-r17fbq.svelte-r17fbq{width:30rem;margin-top:7rem;min-height:100vh}.title.svelte-r17fbq.svelte-r17fbq{font-size:25px;font-weight:700;color:var(--solid)}.dates.svelte-r17fbq.svelte-r17fbq{margin-top:5px;font-family:'Roboto Mono Variable', sans-serif;font-weight:300;font-size:14px}.mds.svelte-r17fbq.svelte-r17fbq{width:99%;margin:1rem auto 0}.stacks.svelte-r17fbq.svelte-r17fbq{margin-top:1.2rem;padding-top:1rem;padding-bottom:0.8rem;padding-inline:0.9rem;border-radius:8px;border:1px solid var(--border);position:relative;display:inline-flex;font-size:11px;box-sizing:border-box;align-items:center;font-family:"Roboto Mono Variable", sans-serif;font-weight:400;line-height:1.1876em;letter-spacing:0.00938em;flex-wrap:wrap;gap:6px;width:100%}.stacks.svelte-r17fbq span.svelte-r17fbq{position:absolute;left:18px;background:var(--bg);padding-inline:0.5rem;top:-7px;color:var(--text-thin);font-size:12px}.stacks.svelte-r17fbq .item.svelte-r17fbq{border:1px solid var(--border);width:max-content;padding-inline:10px;padding-block:4px;border-radius:100px;font-size:13px;grid-column:span 1\r
-    }.links.svelte-r17fbq.svelte-r17fbq{display:flex;align-items:center;font-family:'Roboto Mono Variable', sans-serif;gap:6px;margin-top:8px}.links.svelte-r17fbq p.svelte-r17fbq{padding-inline:10px;padding-block:2px;border:1px solid var(--border);color:var(--text-thin);font-size:13px;border-radius:100px}.links.svelte-r17fbq a.svelte-r17fbq{font-size:13px;text-decoration:none;color:var(--text-thin);margin-bottom:2px;transition:all 0.2s;cursor:pointer}.links.svelte-r17fbq a.svelte-r17fbq:hover{color:var(--solid)}@media(max-width: 600px){.contents.svelte-r17fbq.svelte-r17fbq{width:20rem}}`,
+    css$22 = {
+      code: "section.svelte-987s6n{width:35rem;position:relative;transition:height 0.2s}.contents.svelte-987s6n{position:absolute;display:inline-flex;box-sizing:border-box;align-items:center;line-height:1.1876em;letter-spacing:0.00938em;flex-wrap:wrap;gap:6px;width:100%}@media(max-width: 700px){section.svelte-987s6n{width:80%}}.box.svelte-987s6n{width:-moz-max-content;width:max-content;padding-inline:12px;padding-block:3px;border-radius:100px;font-size:15px;border:1px solid var(--border);transition:all 0.2s;-webkit-user-select:none;-moz-user-select:none;user-select:none}.box.svelte-987s6n:hover{background:var(--text);color:var(--bg)}",
       map: null
     };
-    Page6 = create_ssr_component(($$result, $$props, $$bindings, slots) => {
-      let $page, $$unsubscribe_page;
-      $$unsubscribe_page = subscribe(page, (value) => $page = value);
-      $page.params.id;
-      let data = {};
-      $$result.css.add(css6);
-      $$unsubscribe_page();
-      return `${$$result.head += `<!-- HEAD_svelte-yfsl1l_START -->${$$result.title = `<title>Works / ${escape2(data.title)} - Hideko Portfolio</title>`, ""}<!-- HEAD_svelte-yfsl1l_END -->`, ""} <section class="svelte-r17fbq">${``} </section>`;
+    TechItems = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let $techState, $$unsubscribe_techState;
+      $$unsubscribe_techState = subscribe(techState, (value) => $techState = value);
+      let language = [], library = [], framework = [], technology = [];
+      $$result.css.add(css$22);
+      $$unsubscribe_techState();
+      return `${validate_component(TechOverlay, "TechOverlay").$$render($$result, {}, {}, {})} <section${add_attribute("style", `height: 10rem; transition-delay: ${$techState === 0 ? 0.3 : 0}s;`, 0)} class="svelte-987s6n"><div class="contents svelte-987s6n">${$techState === 0 ? `${each(language, (c3) => {
+        return `<div class="box svelte-987s6n"><p>${escape2(c3.text)}</p> </div>`;
+      })}` : `${$techState === 1 ? `${each(library, (c3) => {
+        return `<div class="box svelte-987s6n"><p>${escape2(c3.text)}</p> </div>`;
+      })}` : `${$techState === 2 ? `${each(framework, (c3) => {
+        return `<div class="box svelte-987s6n"><p>${escape2(c3.text)}</p> </div>`;
+      })}` : `${$techState === 3 ? `${each(technology, (c3) => {
+        return `<div class="box svelte-987s6n"><p>${escape2(c3.text)}</p> </div>`;
+      })}` : ``}`}`}`}</div> </section>`;
+    });
+    css$12 = {
+      code: ".titles.svelte-14j2u7w{display:flex;align-items:center;gap:15px}section.svelte-14j2u7w{margin-top:4rem}.items.svelte-14j2u7w{margin-top:12px;display:flex;align-items:center;justify-content:center;cursor:pointer}@media(max-width: 700px){.titles.svelte-14j2u7w{margin-left:10%}.bar.svelte-14j2u7w{margin-top:8px}}",
+      map: null
+    };
+    Tech = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      $$result.css.add(css$12);
+      return `<section class="svelte-14j2u7w"><div class="titles svelte-14j2u7w">${validate_component(PageTitle, "PageTitle").$$render($$result, { title: "Technology" }, {}, {})} <div class="bar svelte-14j2u7w">${validate_component(TechBar, "TechBar").$$render($$result, {}, {}, {})}</div></div> <div class="items svelte-14j2u7w">${validate_component(TechItems, "TechItems").$$render($$result, {}, {}, {})}</div> </section>`;
+    });
+    css4 = {
+      code: "section.svelte-wi3nqw{display:flex;justify-content:center;padding-top:11rem}",
+      map: null
+    };
+    Page = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      $$result.css.add(css4);
+      return `${validate_component(Title, "Title").$$render($$result, { value: "Home" }, {}, {})} <section class="svelte-wi3nqw"><div>${validate_component(About, "About").$$render($$result, {}, {}, {})} ${validate_component(Tech, "Tech").$$render($$result, {}, {}, {})}</div> </section>`;
     });
   }
 });
 
-// .extend/output/server/nodes/7.js
-var __exports8 = {};
-__export(__exports8, {
-  component: () => component8,
-  fonts: () => fonts8,
-  imports: () => imports8,
-  index: () => index8,
-  stylesheets: () => stylesheets8
+// .extend/output/server/entries/pages/_page.svelte.js
+var page_svelte_exports2 = {};
+__export(page_svelte_exports2, {
+  default: () => Page2
 });
-var index8, component_cache8, component8, imports8, stylesheets8, fonts8;
-var init__8 = __esm({
-  ".extend/output/server/nodes/7.js"() {
-    index8 = 7;
-    component8 = async () => component_cache8 ??= (await Promise.resolve().then(() => (init_page_svelte6(), page_svelte_exports6))).default;
-    imports8 = ["_app/immutable/nodes/7.1a7f930f.js", "_app/immutable/chunks/scheduler.0d2f776c.js", "_app/immutable/chunks/index.e8a83480.js", "_app/immutable/chunks/each.e59479a4.js", "_app/immutable/chunks/stores.3b1731a6.js", "_app/immutable/chunks/singletons.50650c4a.js", "_app/immutable/chunks/works.daa1dc1c.js"];
-    stylesheets8 = ["_app/immutable/assets/7.791404b6.css"];
-    fonts8 = [];
+var Page2;
+var init_page_svelte2 = __esm({
+  ".extend/output/server/entries/pages/_page.svelte.js"() {
+    init_ssr();
+    init_page_svelte();
+    Page2 = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      return `${validate_component(Page, "Index").$$render($$result, {}, {}, {})}`;
+    });
+  }
+});
+
+// .extend/output/server/nodes/2.js
+var __exports3 = {};
+__export(__exports3, {
+  component: () => component3,
+  fonts: () => fonts3,
+  imports: () => imports3,
+  index: () => index3,
+  stylesheets: () => stylesheets3
+});
+var index3, component_cache3, component3, imports3, stylesheets3, fonts3;
+var init__3 = __esm({
+  ".extend/output/server/nodes/2.js"() {
+    index3 = 2;
+    component3 = async () => component_cache3 ??= (await Promise.resolve().then(() => (init_page_svelte2(), page_svelte_exports2))).default;
+    imports3 = ["_svelte/immutable/nodes/2.41c68a51.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js", "_svelte/immutable/nodes/4.9abe3fba.js", "_svelte/immutable/chunks/pageTitle.503e0206.js", "_svelte/immutable/chunks/index.9014b818.js", "_svelte/immutable/chunks/index.5ba2287e.js", "_svelte/immutable/chunks/cms.6cec21ef.js"];
+    stylesheets3 = ["_svelte/immutable/assets/4.8b2c4f3d.css", "_svelte/immutable/assets/pageTitle.0bbcfdf8.css", "_svelte/immutable/assets/index.32503cb2.css"];
+    fonts3 = [];
+  }
+});
+
+// .extend/output/server/entries/pages/contact/_page.svelte.js
+var page_svelte_exports3 = {};
+__export(page_svelte_exports3, {
+  default: () => Page3
+});
+var css5, Page3;
+var init_page_svelte3 = __esm({
+  ".extend/output/server/entries/pages/contact/_page.svelte.js"() {
+    init_ssr();
+    init_pageTitle();
+    init_Toaster_svelte_svelte_type_style_lang();
+    css5 = {
+      code: "section.svelte-1yzxvxd{display:flex;align-items:center;justify-content:center;height:100vh;font-family:'Inter', sans-serif;font-weight:500}.box.svelte-1yzxvxd{display:grid}.inputs.svelte-1yzxvxd{background:var(--bg);border:1px solid var(--outline);border-radius:8px;padding:1rem;transition:all 0.2s;margin-block:3px;font-family:'Inter', sans-serif;font-weight:500;outline:none}.inputs.svelte-1yzxvxd:hover{border-color:var(--thin)}.inputs.svelte-1yzxvxd:focus{border-color:var(--text)}input.svelte-1yzxvxd{height:2.5rem}textarea.svelte-1yzxvxd{width:20rem;height:12rem;resize:none}span.svelte-1yzxvxd{margin-top:5px;color:var(--thin);font-size:14px}.btn.svelte-1yzxvxd{height:2.5rem;display:flex;align-items:center;justify-content:center;cursor:pointer;-webkit-user-select:none;-moz-user-select:none;user-select:none}.btn.svelte-1yzxvxd:active{outline-color:var(--text)}",
+      map: null
+    };
+    Page3 = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let mail;
+      $$result.css.add(css5);
+      return `${validate_component(Title, "Title").$$render($$result, { value: "Contact" }, {}, {})} <section class="svelte-1yzxvxd"><div class="box svelte-1yzxvxd">${validate_component(PageTitle, "PageTitle").$$render(
+        $$result,
+        {
+          title: "Contact",
+          customStyle: "margin: 0 auto 5px"
+        },
+        {},
+        {}
+      )} <span class="span-input svelte-1yzxvxd" data-svelte-h="svelte-1x3ckqq">Email</span> <input type="email" class="inputs svelte-1yzxvxd"${add_attribute("value", mail, 0)}> <span class="span-textarea svelte-1yzxvxd" data-svelte-h="svelte-1uth1qm">What are the requirements?</span> <textarea class="inputs svelte-1yzxvxd">${escape2("")}</textarea> <div class="btn inputs svelte-1yzxvxd" data-svelte-h="svelte-18pm20m">Submit</div></div> </section>`;
+    });
+  }
+});
+
+// .extend/output/server/nodes/3.js
+var __exports4 = {};
+__export(__exports4, {
+  component: () => component4,
+  fonts: () => fonts4,
+  imports: () => imports4,
+  index: () => index4,
+  stylesheets: () => stylesheets4
+});
+var index4, component_cache4, component4, imports4, stylesheets4, fonts4;
+var init__4 = __esm({
+  ".extend/output/server/nodes/3.js"() {
+    index4 = 3;
+    component4 = async () => component_cache4 ??= (await Promise.resolve().then(() => (init_page_svelte3(), page_svelte_exports3))).default;
+    imports4 = ["_svelte/immutable/nodes/3.c6a756b6.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js", "_svelte/immutable/chunks/pageTitle.503e0206.js", "_svelte/immutable/chunks/Toaster.svelte_svelte_type_style_lang.c1062644.js", "_svelte/immutable/chunks/index.5ba2287e.js"];
+    stylesheets4 = ["_svelte/immutable/assets/3.da31eae2.css", "_svelte/immutable/assets/pageTitle.0bbcfdf8.css", "_svelte/immutable/assets/Toaster.5032d475.css"];
+    fonts4 = [];
+  }
+});
+
+// .extend/output/server/nodes/4.js
+var __exports5 = {};
+__export(__exports5, {
+  component: () => component5,
+  fonts: () => fonts5,
+  imports: () => imports5,
+  index: () => index5,
+  stylesheets: () => stylesheets5
+});
+var index5, component_cache5, component5, imports5, stylesheets5, fonts5;
+var init__5 = __esm({
+  ".extend/output/server/nodes/4.js"() {
+    index5 = 4;
+    component5 = async () => component_cache5 ??= (await Promise.resolve().then(() => (init_page_svelte(), page_svelte_exports))).default;
+    imports5 = ["_svelte/immutable/nodes/4.9abe3fba.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js", "_svelte/immutable/chunks/pageTitle.503e0206.js", "_svelte/immutable/chunks/index.9014b818.js", "_svelte/immutable/chunks/index.5ba2287e.js", "_svelte/immutable/chunks/cms.6cec21ef.js"];
+    stylesheets5 = ["_svelte/immutable/assets/4.8b2c4f3d.css", "_svelte/immutable/assets/pageTitle.0bbcfdf8.css", "_svelte/immutable/assets/index.32503cb2.css"];
+    fonts5 = [];
+  }
+});
+
+// .extend/output/server/entries/pages/works/_page.svelte.js
+var page_svelte_exports4 = {};
+__export(page_svelte_exports4, {
+  default: () => Page4
+});
+var css6, Page4;
+var init_page_svelte4 = __esm({
+  ".extend/output/server/entries/pages/works/_page.svelte.js"() {
+    init_ssr();
+    init_pageTitle();
+    init_cms();
+    init_free_solid_svg_icons();
+    init_fa();
+    css6 = {
+      code: `.loading.svelte-ph71x9.svelte-ph71x9{display:flex;align-items:center;justify-content:center;font-size:10px;position:absolute;left:50%;transform:translateX(-50%);top:50%}section.svelte-ph71x9.svelte-ph71x9{display:flex;justify-content:center;min-height:100vh;height:-moz-max-content;height:max-content;padding-block:2rem;padding-top:11rem}.items.svelte-ph71x9.svelte-ph71x9{margin:0 auto 0;width:35rem}.stats.svelte-ph71x9.svelte-ph71x9{font-size:11px;border-radius:8px;background:var(--text);color:var(--bg);margin-left:5px}.stats.svelte-ph71x9 p.svelte-ph71x9{margin-inline:8px;margin-block:2px}.titles.svelte-ph71x9.svelte-ph71x9{display:flex;align-items:center}.title.svelte-ph71x9.svelte-ph71x9{font-weight:500;border-bottom:1px solid var(--text);margin-bottom:1px}.contents.svelte-ph71x9.svelte-ph71x9{margin-top:5px}.item.svelte-ph71x9.svelte-ph71x9{font-family:'Inter', sans-serif;display:block;text-decoration:none;color:var(--text);border-radius:10px;padding-block:10px;transition:all 0.2s;padding-inline:2px;position:relative}.item.svelte-ph71x9.svelte-ph71x9::before{content:"";position:absolute;left:0;top:0;width:100%;opacity:0;height:100%;background:linear-gradient(to right, var(--bg-thin), transparent);border-radius:10px;z-index:-1;transition:all 0.2s ease}.item.svelte-ph71x9.svelte-ph71x9:hover{padding-inline:13px}.item.svelte-ph71x9.svelte-ph71x9:hover::before{opacity:1}.bio.svelte-ph71x9.svelte-ph71x9{font-size:14px;color:var(--thin);width:100%}@media(max-width: 700px){.items.svelte-ph71x9.svelte-ph71x9{width:80%}}`,
+      map: null
+    };
+    Page4 = create_ssr_component(($$result, $$props, $$bindings, slots) => {
+      let datas = [];
+      $$result.css.add(css6);
+      return `${validate_component(Title, "Title").$$render($$result, { value: "Works" }, {}, {})} <section class="svelte-ph71x9"><div class="items svelte-ph71x9">${validate_component(PageTitle, "PageTitle").$$render($$result, { title: "Works" }, {}, {})} <div>${datas.length > 0 ? `<div class="contents svelte-ph71x9">${each(datas, (data) => {
+        return `<a${add_attribute("href", data.website, 0)} class="item svelte-ph71x9"><span class="titles svelte-ph71x9"><p class="title svelte-ph71x9">${escape2(data.title)}</p> <span class="stats svelte-ph71x9">${JSON.stringify(data.stats) === JSON.stringify(["None"]) ? `` : `<p class="svelte-ph71x9">${escape2(data.stats)}</p>`} </span></span> <p class="bio svelte-ph71x9">${escape2(data.bio)}</p> </a>`;
+      })}</div>` : `<div class="loading svelte-ph71x9">${validate_component(Fa$1, "Fa").$$render(
+        $$result,
+        {
+          icon: faCircleNotch,
+          size: "3x",
+          spin: true
+        },
+        {},
+        {}
+      )}</div>`}</div></div> </section>`;
+    });
+  }
+});
+
+// .extend/output/server/nodes/5.js
+var __exports6 = {};
+__export(__exports6, {
+  component: () => component6,
+  fonts: () => fonts6,
+  imports: () => imports6,
+  index: () => index6,
+  stylesheets: () => stylesheets6
+});
+var index6, component_cache6, component6, imports6, stylesheets6, fonts6;
+var init__6 = __esm({
+  ".extend/output/server/nodes/5.js"() {
+    index6 = 5;
+    component6 = async () => component_cache6 ??= (await Promise.resolve().then(() => (init_page_svelte4(), page_svelte_exports4))).default;
+    imports6 = ["_svelte/immutable/nodes/5.0edfef69.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js", "_svelte/immutable/chunks/index.9014b818.js", "_svelte/immutable/chunks/pageTitle.503e0206.js", "_svelte/immutable/chunks/cms.6cec21ef.js"];
+    stylesheets6 = ["_svelte/immutable/assets/5.00038da3.css", "_svelte/immutable/assets/index.32503cb2.css", "_svelte/immutable/assets/pageTitle.0bbcfdf8.css"];
+    fonts6 = [];
+  }
+});
+
+// .extend/output/server/entries/endpoints/_server.js
+var server_exports = {};
+var init_server = __esm({
+  ".extend/output/server/entries/endpoints/_server.js"() {
   }
 });
 
@@ -4704,18 +5408,27 @@ init_ssr();
 var base = "";
 var assets = base;
 var initial = { base, assets };
+function override(paths) {
+  base = paths.base;
+  assets = paths.assets;
+}
 function reset() {
   base = initial.base;
   assets = initial.assets;
 }
 var public_env = {};
+var safe_public_env = {};
 function set_private_env(environment) {
 }
 function set_public_env(environment) {
   public_env = environment;
 }
+function set_safe_public_env(environment) {
+  safe_public_env = environment;
+}
 function afterUpdate() {
 }
+var building = false;
 var Root = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   let { stores } = $$props;
   let { page: page2 } = $$props;
@@ -4790,10 +5503,10 @@ var Root = create_ssr_component(($$result, $$props, $$bindings, slots) => {
   return $$rendered;
 });
 var options = {
+  app_dir: "_svelte",
   app_template_contains_nonce: false,
   csp: { "mode": "auto", "directives": { "upgrade-insecure-requests": false, "block-all-mixed-content": false }, "reportOnly": { "upgrade-insecure-requests": false, "block-all-mixed-content": false } },
   csrf_check_origin: true,
-  track_server_fetches: false,
   embedded: false,
   env_public_prefix: "PUBLIC_",
   env_private_prefix: "",
@@ -4803,8 +5516,8 @@ var options = {
   root: Root,
   service_worker: false,
   templates: {
-    app: ({ head, body, assets: assets2, nonce, env }) => '<!DOCTYPE stands>\n<stands lang="en">\n	<head>\n		<meta charset="utf-8" />\n		<link rel="icon" href="' + assets2 + '/icon.svg" />\n		<meta name="viewport" content="width=device-width, initial-scale=1" />\n		' + head + '\n	</head>\n	<body data-sveltekit-preload-data="hover">\n		<div style="display: contents">' + body + "</div>\n	</body>\n</stands>\n",
-    error: ({ status, message }) => '<!DOCTYPE stands>\n<stands lang="en">\n	<head>\n		<meta charset="utf-8" />\n		<title>' + message + `</title>
+    app: ({ head, body: body2, assets: assets2, nonce, env }) => '<!DOCTYPE html>\r\n<html lang="en">\r\n	<head>\r\n		<meta charset="utf-8" />\r\n		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\r\n		' + head + '\r\n	</head>\r\n	<body data-sveltekit-preload-data="false">\r\n		<div style="display: contents">' + body2 + "</div>\r\n	</body>\r\n</html>",
+    error: ({ status, message }) => '<!doctype html>\n<html lang="en">\n	<head>\n		<meta charset="utf-8" />\n		<title>' + message + `</title>
 
 		<style>
 			body {
@@ -4813,8 +5526,18 @@ var options = {
 				--divider: #ccc;
 				background: var(--bg);
 				color: var(--fg);
-				font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen,
-					Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+				font-family:
+					system-ui,
+					-apple-system,
+					BlinkMacSystemFont,
+					'Segoe UI',
+					Roboto,
+					Oxygen,
+					Ubuntu,
+					Cantarell,
+					'Open Sans',
+					'Helvetica Neue',
+					sans-serif;
 				display: flex;
 				align-items: center;
 				justify-content: center;
@@ -4863,9 +5586,9 @@ var options = {
 	</head>
 	<body>
 		<div class="error">
-			<span class="status">` + status + '</span>\n			<div class="message">\n				<h1>' + message + "</h1>\n			</div>\n		</div>\n	</body>\n</stands>\n"
+			<span class="status">` + status + '</span>\n			<div class="message">\n				<h1>' + message + "</h1>\n			</div>\n		</div>\n	</body>\n</html>\n"
   },
-  version_hash: "1d1b37b"
+  version_hash: "1x9hrip"
 };
 function get_hooks() {
   return {};
@@ -5205,13 +5928,13 @@ function stringify(value, reducers) {
       return NEGATIVE_INFINITY;
     if (thing === 0 && 1 / thing < 0)
       return NEGATIVE_ZERO;
-    const index10 = p2++;
-    indexes.set(thing, index10);
+    const index8 = p2++;
+    indexes.set(thing, index8);
     for (const { key: key2, fn } of custom) {
       const value2 = fn(thing);
       if (value2) {
-        stringified[index10] = `["${key2}",${flatten(value2)}]`;
-        return index10;
+        stringified[index8] = `["${key2}",${flatten(value2)}]`;
+        return index8;
       }
     }
     let str = "";
@@ -5303,12 +6026,12 @@ function stringify(value, reducers) {
           }
       }
     }
-    stringified[index10] = str;
-    return index10;
+    stringified[index8] = str;
+    return index8;
   }
-  const index9 = flatten(value);
-  if (index9 < 0)
-    return `${index9}`;
+  const index7 = flatten(value);
+  if (index7 < 0)
+    return `${index7}`;
   return `[${stringified.join(",")}]`;
 }
 function stringify_primitive2(thing) {
@@ -5332,16 +6055,8 @@ var import_cookie = __toESM(require_cookie(), 1);
 var set_cookie_parser = __toESM(require_set_cookie(), 1);
 var DEV = false;
 var SVELTE_KIT_ASSETS = "/_svelte_kit_assets";
-var ENDPOINT_METHODS = /* @__PURE__ */ new Set([
-  "GET",
-  "POST",
-  "PUT",
-  "PATCH",
-  "DELETE",
-  "OPTIONS",
-  "HEAD"
-]);
-var PAGE_METHODS = /* @__PURE__ */ new Set(["GET", "POST", "HEAD"]);
+var ENDPOINT_METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"];
+var PAGE_METHODS = ["GET", "POST", "HEAD"];
 function negotiate(accept, types) {
   const parts = [];
   accept.split(",").forEach((str, i2) => {
@@ -5394,12 +6109,12 @@ var HttpError = class {
    * @param {number} status
    * @param {{message: string} extends App.Error ? (App.Error | string | undefined) : App.Error} body
    */
-  constructor(status, body) {
+  constructor(status, body2) {
     this.status = status;
-    if (typeof body === "string") {
-      this.body = { message: body };
-    } else if (body) {
-      this.body = body;
+    if (typeof body2 === "string") {
+      this.body = { message: body2 };
+    } else if (body2) {
+      this.body = body2;
     } else {
       this.body = { message: `Error: ${status}` };
     }
@@ -5418,89 +6133,56 @@ var Redirect = class {
     this.location = location;
   }
 };
+var SvelteKitError = class extends Error {
+  /**
+   * @param {number} status
+   * @param {string} text
+   * @param {string} message
+   */
+  constructor(status, text2, message) {
+    super(message);
+    this.status = status;
+    this.text = text2;
+  }
+};
 var ActionFailure = class {
   /**
    * @param {number} status
-   * @param {T} [data]
+   * @param {T} data
    */
   constructor(status, data) {
     this.status = status;
     this.data = data;
   }
 };
-function exec(match, params, matchers) {
-  const result = {};
-  const values = match.slice(1);
-  const values_needing_match = values.filter((value) => value !== void 0);
-  let buffered = 0;
-  for (let i2 = 0; i2 < params.length; i2 += 1) {
-    const param = params[i2];
-    let value = values[i2 - buffered];
-    if (param.chained && param.rest && buffered) {
-      value = values.slice(i2 - buffered, i2 + 1).filter((s22) => s22).join("/");
-      buffered = 0;
-    }
-    if (value === void 0) {
-      if (param.rest)
-        result[param.name] = "";
-      continue;
-    }
-    if (!param.matcher || matchers[param.matcher](value)) {
-      result[param.name] = value;
-      const next_param = params[i2 + 1];
-      const next_value = values[i2 + 1];
-      if (next_param && !next_param.rest && next_param.optional && next_value && param.chained) {
-        buffered = 0;
-      }
-      if (!next_param && !next_value && Object.keys(result).length === values_needing_match.length) {
-        buffered = 0;
-      }
-      continue;
-    }
-    if (param.optional && param.chained) {
-      buffered++;
-      continue;
-    }
-    return;
-  }
-  if (buffered)
-    return;
-  return result;
-}
-function error(status, body) {
-  if (isNaN(status) || status < 400 || status > 599) {
-    throw new Error(`HTTP error status codes must be between 400 and 599 \u2014 ${status} is invalid`);
-  }
-  return new HttpError(status, body);
-}
 function json(data, init2) {
-  const body = JSON.stringify(data);
-  const headers = new Headers(init2?.headers);
-  if (!headers.has("content-length")) {
-    headers.set("content-length", encoder$3.encode(body).byteLength.toString());
+  const body2 = JSON.stringify(data);
+  const headers2 = new Headers(init2?.headers);
+  if (!headers2.has("content-length")) {
+    headers2.set("content-length", encoder$3.encode(body2).byteLength.toString());
   }
-  if (!headers.has("content-type")) {
-    headers.set("content-type", "application/json");
+  if (!headers2.has("content-type")) {
+    headers2.set("content-type", "application/json");
   }
-  return new Response(body, {
+  return new Response(body2, {
     ...init2,
-    headers
+    headers: headers2
   });
 }
 var encoder$3 = new TextEncoder();
-function text(body, init2) {
-  const headers = new Headers(init2?.headers);
-  if (!headers.has("content-length")) {
-    const encoded = encoder$3.encode(body);
-    headers.set("content-length", encoded.byteLength.toString());
+function text(body2, init2) {
+  const headers2 = new Headers(init2?.headers);
+  if (!headers2.has("content-length")) {
+    const encoded = encoder$3.encode(body2);
+    headers2.set("content-length", encoded.byteLength.toString());
     return new Response(encoded, {
       ...init2,
-      headers
+      headers: headers2
     });
   }
-  return new Response(body, {
+  return new Response(body2, {
     ...init2,
-    headers
+    headers: headers2
   });
 }
 function coalesce_to_error(err) {
@@ -5511,11 +6193,17 @@ function coalesce_to_error(err) {
     err
   ) : new Error(JSON.stringify(err));
 }
-function normalize_error(error2) {
+function normalize_error(error) {
   return (
-    /** @type {import('../runtime/control.js').Redirect | import('../runtime/control.js').HttpError | Error} */
-    error2
+    /** @type {import('../runtime/control.js').Redirect | HttpError | SvelteKitError | Error} */
+    error
   );
+}
+function get_status(error) {
+  return error instanceof HttpError || error instanceof SvelteKitError ? error.status : 500;
+}
+function get_message(error) {
+  return error instanceof SvelteKitError ? error.text : "Internal Error";
 }
 function method_not_allowed(mod, method) {
   return text(`${method} method not allowed`, {
@@ -5528,7 +6216,7 @@ function method_not_allowed(mod, method) {
   });
 }
 function allowed_methods(mod) {
-  const allowed = Array.from(ENDPOINT_METHODS).filter((method) => method in mod);
+  const allowed = ENDPOINT_METHODS.filter((method) => method in mod);
   if ("GET" in mod || "HEAD" in mod)
     allowed.push("HEAD");
   return allowed;
@@ -5536,33 +6224,32 @@ function allowed_methods(mod) {
 function static_error_page(options2, status, message) {
   let page2 = options2.templates.error({ status, message });
   return text(page2, {
-    headers: { "content-type": "text/stands; charset=utf-8" },
+    headers: { "content-type": "text/html; charset=utf-8" },
     status
   });
 }
-async function handle_fatal_error(event, options2, error2) {
-  error2 = error2 instanceof HttpError ? error2 : coalesce_to_error(error2);
-  const status = error2 instanceof HttpError ? error2.status : 500;
-  const body = await handle_error_and_jsonify(event, options2, error2);
-  const type = negotiate(event.request.headers.get("accept") || "text/stands", [
+async function handle_fatal_error(event, options2, error) {
+  error = error instanceof HttpError ? error : coalesce_to_error(error);
+  const status = get_status(error);
+  const body2 = await handle_error_and_jsonify(event, options2, error);
+  const type = negotiate(event.request.headers.get("accept") || "text/html", [
     "application/json",
-    "text/stands"
+    "text/html"
   ]);
   if (event.isDataRequest || type === "application/json") {
-    return json(body, {
+    return json(body2, {
       status
     });
   }
-  return static_error_page(options2, status, body.message);
+  return static_error_page(options2, status, body2.message);
 }
-async function handle_error_and_jsonify(event, options2, error2) {
-  if (error2 instanceof HttpError) {
-    return error2.body;
-  } else {
-    return await options2.hooks.handleError({ error: error2, event }) ?? {
-      message: event.route.id != null ? "Internal Error" : "Not Found"
-    };
+async function handle_error_and_jsonify(event, options2, error) {
+  if (error instanceof HttpError) {
+    return error.body;
   }
+  const status = get_status(error);
+  const message = get_message(error);
+  return await options2.hooks.handleError({ error, event, status, message }) ?? { message };
 }
 function redirect_response(status, location) {
   const response = new Response(void 0, {
@@ -5571,19 +6258,22 @@ function redirect_response(status, location) {
   });
   return response;
 }
-function clarify_devalue_error(event, error2) {
-  if (error2.path) {
-    return `Data returned from \`load\` while rendering ${event.route.id} is not serializable: ${error2.message} (data${error2.path})`;
+function clarify_devalue_error(event, error) {
+  if (error.path) {
+    return `Data returned from \`load\` while rendering ${event.route.id} is not serializable: ${error.message} (data${error.path})`;
   }
-  if (error2.path === "") {
+  if (error.path === "") {
     return `Data returned from \`load\` while rendering ${event.route.id} is not a plain object`;
   }
-  return error2.message;
+  return error.message;
 }
 function stringify_uses(node) {
   const uses = [];
   if (node.uses && node.uses.dependencies.size > 0) {
     uses.push(`"dependencies":${JSON.stringify(Array.from(node.uses.dependencies))}`);
+  }
+  if (node.uses && node.uses.search_params.size > 0) {
+    uses.push(`"search_params":${JSON.stringify(Array.from(node.uses.search_params))}`);
   }
   if (node.uses && node.uses.params.size > 0) {
     uses.push(`"params":${JSON.stringify(Array.from(node.uses.params))}`);
@@ -5649,20 +6339,28 @@ async function render_endpoint(event, mod, state) {
   }
 }
 function is_endpoint_request(event) {
-  const { method, headers } = event.request;
-  if (ENDPOINT_METHODS.has(method) && !PAGE_METHODS.has(method)) {
+  const { method, headers: headers2 } = event.request;
+  if (ENDPOINT_METHODS.includes(method) && !PAGE_METHODS.includes(method)) {
     return true;
   }
-  if (method === "POST" && headers.get("x-sveltekit-action") === "true")
+  if (method === "POST" && headers2.get("x-sveltekit-action") === "true")
     return false;
   const accept = event.request.headers.get("accept") ?? "*/*";
-  return negotiate(accept, ["*", "text/stands"]) !== "text/stands";
+  return negotiate(accept, ["*", "text/html"]) !== "text/html";
 }
 function compact(arr) {
   return arr.filter(
     /** @returns {val is NonNullable<T>} */
     (val) => val != null
   );
+}
+var internal = new URL("sveltekit-internal://");
+function resolve(base2, path) {
+  if (path[0] === "/" && path[1] === "/")
+    return path;
+  let url = new URL(base2, internal);
+  url = new URL(path, url);
+  return url.protocol === internal.protocol ? url.pathname + url.search + url.hash : url.href;
 }
 function normalize_path(path, trailing_slash) {
   if (path === "/" || trailing_slash === "ignore")
@@ -5689,13 +6387,29 @@ var tracked_url_properties = (
     "href",
     "pathname",
     "search",
-    "searchParams",
     "toString",
     "toJSON"
   ]
 );
-function make_trackable(url, callback) {
+function make_trackable(url, callback, search_params_callback) {
   const tracked = new URL(url);
+  Object.defineProperty(tracked, "searchParams", {
+    value: new Proxy(tracked.searchParams, {
+      get(obj, key2) {
+        if (key2 === "get" || key2 === "getAll" || key2 === "has") {
+          return (param) => {
+            search_params_callback(param);
+            return obj[key2](param);
+          };
+        }
+        callback();
+        const value = Reflect.get(obj, key2);
+        return typeof value === "function" ? value.bind(obj) : value;
+      }
+    }),
+    enumerable: true,
+    configurable: true
+  });
   for (const property of tracked_url_properties) {
     Object.defineProperty(tracked, property, {
       get() {
@@ -5719,7 +6433,7 @@ function disable_hash(url) {
   Object.defineProperty(url, "hash", {
     get() {
       throw new Error(
-        "Cannot access event.url.hash. Consider using `$index.url.hash` inside a component instead"
+        "Cannot access event.url.hash. Consider using `$page.url.hash` inside a component instead"
       );
     }
   });
@@ -5742,26 +6456,36 @@ function allow_nodejs_console_log(url) {
   }
 }
 var DATA_SUFFIX = "/__data.json";
+var HTML_DATA_SUFFIX = ".html__data.json";
 function has_data_suffix(pathname) {
-  return pathname.endsWith(DATA_SUFFIX);
+  return pathname.endsWith(DATA_SUFFIX) || pathname.endsWith(HTML_DATA_SUFFIX);
 }
 function add_data_suffix(pathname) {
+  if (pathname.endsWith(".html"))
+    return pathname.replace(/\.html$/, HTML_DATA_SUFFIX);
   return pathname.replace(/\/$/, "") + DATA_SUFFIX;
 }
 function strip_data_suffix(pathname) {
+  if (pathname.endsWith(HTML_DATA_SUFFIX)) {
+    return pathname.slice(0, -HTML_DATA_SUFFIX.length) + ".html";
+  }
   return pathname.slice(0, -DATA_SUFFIX.length);
 }
 function is_action_json_request(event) {
   const accept = negotiate(event.request.headers.get("accept") ?? "*/*", [
     "application/json",
-    "text/stands"
+    "text/html"
   ]);
   return accept === "application/json" && event.request.method === "POST";
 }
 async function handle_action_json_request(event, options2, server2) {
   const actions = server2?.actions;
   if (!actions) {
-    const no_actions_error = error(405, "POST method not allowed. No actions exist for this index");
+    const no_actions_error = new SvelteKitError(
+      405,
+      "Method Not Allowed",
+      "POST method not allowed. No actions exist for this page"
+    );
     return action_json(
       {
         type: "error",
@@ -5818,13 +6542,13 @@ async function handle_action_json_request(event, options2, server2) {
         error: await handle_error_and_jsonify(event, options2, check_incorrect_fail_use(err))
       },
       {
-        status: err instanceof HttpError ? err.status : 500
+        status: get_status(err)
       }
     );
   }
 }
-function check_incorrect_fail_use(error2) {
-  return error2 instanceof ActionFailure ? new Error('Cannot "throw fail()". Use "return fail()"') : error2;
+function check_incorrect_fail_use(error) {
+  return error instanceof ActionFailure ? new Error('Cannot "throw fail()". Use "return fail()"') : error;
 }
 function action_json_redirect(redirect) {
   return action_json({
@@ -5849,7 +6573,11 @@ async function handle_action_request(event, server2) {
     });
     return {
       type: "error",
-      error: error(405, "POST method not allowed. No actions exist for this index")
+      error: new SvelteKitError(
+        405,
+        "Method Not Allowed",
+        "POST method not allowed. No actions exist for this page"
+      )
     };
   }
   check_named_default_separate(actions);
@@ -5907,11 +6635,15 @@ async function call_action(event, actions) {
   }
   const action = actions[name];
   if (!action) {
-    throw new Error(`No action with name '${name}' found`);
+    throw new SvelteKitError(404, "Not Found", `No action with name '${name}' found`);
   }
   if (!is_form_content_type(event.request)) {
-    throw new Error(
-      `Actions expect form-encoded data (received ${event.request.headers.get("content-type")})`
+    throw new SvelteKitError(
+      415,
+      "Unsupported Media Type",
+      `Form actions expect form-encoded data \u2014 received ${event.request.headers.get(
+        "content-type"
+      )}`
     );
   }
   return action(event);
@@ -5926,61 +6658,53 @@ function try_deserialize(data, fn, route_id) {
   try {
     return fn(data);
   } catch (e3) {
-    const error2 = (
+    const error = (
       /** @type {any} */
       e3
     );
-    if ("path" in error2) {
-      let message = `Data returned from action inside ${route_id} is not serializable: ${error2.message}`;
-      if (error2.path !== "")
-        message += ` (data.${error2.path})`;
+    if ("path" in error) {
+      let message = `Data returned from action inside ${route_id} is not serializable: ${error.message}`;
+      if (error.path !== "")
+        message += ` (data.${error.path})`;
       throw new Error(message);
     }
-    throw error2;
+    throw error;
   }
-}
-async function unwrap_promises(object) {
-  for (const key2 in object) {
-    if (typeof object[key2]?.then === "function") {
-      return Object.fromEntries(
-        await Promise.all(Object.entries(object).map(async ([key3, value]) => [key3, await value]))
-      );
-    }
-  }
-  return object;
 }
 var INVALIDATED_PARAM = "x-sveltekit-invalidated";
 var TRAILING_SLASH_PARAM = "x-sveltekit-trailing-slash";
-async function load_server_data({
-  event,
-  state,
-  node,
-  parent,
-  // TODO 2.0: Remove this
-  track_server_fetches
-}) {
+async function load_server_data({ event, state, node, parent }) {
   if (!node?.server)
     return null;
+  let is_tracking = true;
   const uses = {
     dependencies: /* @__PURE__ */ new Set(),
     params: /* @__PURE__ */ new Set(),
     parent: false,
     route: false,
-    url: false
+    url: false,
+    search_params: /* @__PURE__ */ new Set()
   };
-  const url = make_trackable(event.url, () => {
-    uses.url = true;
-  });
+  const url = make_trackable(
+    event.url,
+    () => {
+      if (is_tracking) {
+        uses.url = true;
+      }
+    },
+    (param) => {
+      if (is_tracking) {
+        uses.search_params.add(param);
+      }
+    }
+  );
   if (state.prerendering) {
     disable_search(url);
   }
   const result = await node.server.load?.call(null, {
     ...event,
     fetch: (info, init2) => {
-      const url2 = new URL(info instanceof Request ? info.url : info, event.url);
-      if (track_server_fetches) {
-        uses.dependencies.add(url2.href);
-      }
+      new URL(info instanceof Request ? info.url : info, event.url);
       return event.fetch(info, init2);
     },
     /** @param {string[]} deps */
@@ -5992,7 +6716,9 @@ async function load_server_data({
     },
     params: new Proxy(event.params, {
       get: (target, key2) => {
-        uses.params.add(key2);
+        if (is_tracking) {
+          uses.params.add(key2);
+        }
         return target[
           /** @type {string} */
           key2
@@ -6000,24 +6726,35 @@ async function load_server_data({
       }
     }),
     parent: async () => {
-      uses.parent = true;
+      if (is_tracking) {
+        uses.parent = true;
+      }
       return parent();
     },
     route: new Proxy(event.route, {
       get: (target, key2) => {
-        uses.route = true;
+        if (is_tracking) {
+          uses.route = true;
+        }
         return target[
           /** @type {'id'} */
           key2
         ];
       }
     }),
-    url
+    url,
+    untrack(fn) {
+      is_tracking = false;
+      try {
+        return fn();
+      } finally {
+        is_tracking = true;
+      }
+    }
   });
-  const data = result ? await unwrap_promises(result) : null;
   return {
     type: "data",
-    data,
+    data: result ?? null,
     uses,
     slash: node.server.trailingSlash
   };
@@ -6045,13 +6782,24 @@ async function load_data({
     setHeaders: event.setHeaders,
     depends: () => {
     },
-    parent
+    parent,
+    untrack: (fn) => fn()
   });
-  const data = result ? await unwrap_promises(result) : null;
-  return data;
+  return result ?? null;
+}
+function b64_encode(buffer) {
+  if (globalThis.Buffer) {
+    return Buffer.from(buffer).toString("base64");
+  }
+  const little_endian = new Uint8Array(new Uint16Array([1]).buffer)[0] > 0;
+  return btoa(
+    new TextDecoder(little_endian ? "utf-16le" : "utf-16be").decode(
+      new Uint16Array(new Uint8Array(buffer))
+    )
+  );
 }
 function create_universal_fetch(event, state, fetched, csr, resolve_opts) {
-  return async (input, init2) => {
+  const universal_fetch = async (input, init2) => {
     const cloned_body = input instanceof Request && input.body ? input.clone().body : null;
     const cloned_headers = input instanceof Request && [...input.headers].length ? new Headers(input.headers) : init2?.headers;
     let response = await event.fetch(input, init2);
@@ -6082,31 +6830,25 @@ function create_universal_fetch(event, state, fetched, csr, resolve_opts) {
     }
     const proxy = new Proxy(response, {
       get(response2, key2, _receiver) {
-        async function text2() {
-          const body = await response2.text();
-          if (!body || typeof body === "string") {
-            const status_number = Number(response2.status);
-            if (isNaN(status_number)) {
-              throw new Error(
-                `response.status is not a number. value: "${response2.status}" type: ${typeof response2.status}`
-              );
-            }
-            fetched.push({
-              url: same_origin ? url.href.slice(event.url.origin.length) : url.href,
-              method: event.request.method,
-              request_body: (
-                /** @type {string | ArrayBufferView | undefined} */
-                input instanceof Request && cloned_body ? await stream_to_string(cloned_body) : init2?.body
-              ),
-              request_headers: cloned_headers,
-              response_body: body,
-              response: response2
-            });
+        async function push_fetched(body2, is_b64) {
+          const status_number = Number(response2.status);
+          if (isNaN(status_number)) {
+            throw new Error(
+              `response.status is not a number. value: "${response2.status}" type: ${typeof response2.status}`
+            );
           }
-          if (dependency) {
-            dependency.body = body;
-          }
-          return body;
+          fetched.push({
+            url: same_origin ? url.href.slice(event.url.origin.length) : url.href,
+            method: event.request.method,
+            request_body: (
+              /** @type {string | ArrayBufferView | undefined} */
+              input instanceof Request && cloned_body ? await stream_to_string(cloned_body) : init2?.body
+            ),
+            request_headers: cloned_headers,
+            response_body: body2,
+            response: response2,
+            is_b64
+          });
         }
         if (key2 === "arrayBuffer") {
           return async () => {
@@ -6114,8 +6856,21 @@ function create_universal_fetch(event, state, fetched, csr, resolve_opts) {
             if (dependency) {
               dependency.body = new Uint8Array(buffer);
             }
+            if (buffer instanceof ArrayBuffer) {
+              await push_fetched(b64_encode(buffer), true);
+            }
             return buffer;
           };
+        }
+        async function text2() {
+          const body2 = await response2.text();
+          if (!body2 || typeof body2 === "string") {
+            await push_fetched(body2, false);
+          }
+          if (dependency) {
+            dependency.body = body2;
+          }
+          return body2;
         }
         if (key2 === "text") {
           return text2;
@@ -6145,6 +6900,12 @@ function create_universal_fetch(event, state, fetched, csr, resolve_opts) {
       };
     }
     return proxy;
+  };
+  return (input, init2) => {
+    const response = universal_fetch(input, init2);
+    response.catch(() => {
+    });
+    return response;
   };
 }
 async function stream_to_string(stream) {
@@ -6203,13 +6964,13 @@ var replacements = {
 };
 var pattern = new RegExp(`[${Object.keys(replacements).join("")}]`, "g");
 function serialize_data(fetched, filter, prerendering = false) {
-  const headers = {};
+  const headers2 = {};
   let cache_control = null;
   let age = null;
   let varyAny = false;
   for (const [key2, value] of fetched.response.headers) {
     if (filter(key2, value)) {
-      headers[key2] = value;
+      headers2[key2] = value;
     }
     if (key2 === "cache-control")
       cache_control = value;
@@ -6221,7 +6982,7 @@ function serialize_data(fetched, filter, prerendering = false) {
   const payload = {
     status: fetched.response.status,
     statusText: fetched.response.statusText,
-    headers,
+    headers: headers2,
     body: fetched.response_body
   };
   const safe_payload = JSON.stringify(payload).replace(pattern, (match) => replacements[match]);
@@ -6230,6 +6991,9 @@ function serialize_data(fetched, filter, prerendering = false) {
     "data-sveltekit-fetched",
     `data-url=${escape_html_attr(fetched.url)}`
   ];
+  if (fetched.is_b64) {
+    attrs.push("data-b64");
+  }
   if (fetched.request_headers || fetched.request_body) {
     const values = [];
     if (fetched.request_headers) {
@@ -6339,8 +7103,8 @@ function reverse_endianness(bytes) {
 function encode(str) {
   const encoded = encoder$2.encode(str);
   const length = encoded.length * 8;
-  const size = 512 * Math.ceil((length + 65) / 512);
-  const bytes = new Uint8Array(size / 8);
+  const size2 = 512 * Math.ceil((length + 65) / 512);
+  const bytes = new Uint8Array(size2 / 8);
   bytes.set(encoded);
   bytes[encoded.length] = 128;
   reverse_endianness(bytes);
@@ -6523,8 +7287,8 @@ var Csp = class {
   /** @type {CspReportOnlyProvider} */
   report_only_provider;
   /**
-   * @param {import('./types').CspConfig} config
-   * @param {import('./types').CspOpts} opts
+   * @param {import('./types.js').CspConfig} config
+   * @param {import('./types.js').CspOpts} opts
    */
   constructor({ mode, directives, reportOnly }, { prerender }) {
     const use_hashes = mode === "hash" || mode === "auto" && prerender;
@@ -6597,7 +7361,7 @@ async function render_response({
   state,
   page_config,
   status,
-  error: error2 = null,
+  error = null,
   event,
   resolve_opts,
   action_result
@@ -6607,13 +7371,13 @@ async function render_response({
       throw new Error('Cannot use prerendering if config.kit.csp.mode === "nonce"');
     }
     if (options2.app_template_contains_nonce) {
-      throw new Error("Cannot use prerendering if index template contains %sveltekit.nonce%");
+      throw new Error("Cannot use prerendering if page template contains %sveltekit.nonce%");
     }
   }
   const { client } = manifest2._;
   const modulepreloads = new Set(client.imports);
-  const stylesheets9 = new Set(client.stylesheets);
-  const fonts9 = new Set(client.fonts);
+  const stylesheets7 = new Set(client.stylesheets);
+  const fonts7 = new Set(client.fonts);
   const link_header_preloads = /* @__PURE__ */ new Set();
   const inline_styles = /* @__PURE__ */ new Map();
   let rendered;
@@ -6645,7 +7409,7 @@ async function render_response({
       props[`data_${i2}`] = data2;
     }
     props.page = {
-      error: error2,
+      error,
       params: (
         /** @type {Record<string, any>} */
         event.params
@@ -6654,8 +7418,10 @@ async function render_response({
       status,
       url: event.url,
       data: data2,
-      form: form_value
+      form: form_value,
+      state: {}
     };
+    override({ base: base$1, assets: assets$1 });
     {
       try {
         rendered = options2.root.render(props);
@@ -6667,9 +7433,9 @@ async function render_response({
       for (const url of node.imports)
         modulepreloads.add(url);
       for (const url of node.stylesheets)
-        stylesheets9.add(url);
+        stylesheets7.add(url);
       for (const url of node.fonts)
-        fonts9.add(url);
+        fonts7.add(url);
       if (node.inline_styles) {
         Object.entries(await node.inline_styles()).forEach(([k, v2]) => inline_styles.set(k, v2));
       }
@@ -6678,7 +7444,7 @@ async function render_response({
     rendered = { head: "", html: "", css: { code: "", map: null } };
   }
   let head = "";
-  let body = rendered.html;
+  let body2 = rendered.html;
   const csp = new Csp(options2.csp, {
     prerender: !!state.prerendering
   });
@@ -6697,7 +7463,7 @@ async function render_response({
     head += `
 	<style${attributes.join("")}>${content}</style>`;
   }
-  for (const dep of stylesheets9) {
+  for (const dep of stylesheets7) {
     const path = prefixed(dep);
     const attributes = ['rel="stylesheet"'];
     if (inline_styles.has(dep)) {
@@ -6711,7 +7477,7 @@ async function render_response({
     head += `
 		<link href="${path}" ${attributes.join(" ")}>`;
   }
-  for (const dep of fonts9) {
+  for (const dep of fonts7) {
     const path = prefixed(dep);
     if (resolve_opts.preload({ type: "font", path })) {
       const ext = dep.slice(dep.lastIndexOf(".") + 1);
@@ -6734,12 +7500,15 @@ async function render_response({
     global2
   );
   if (page_config.ssr && page_config.csr) {
-    body += `
+    body2 += `
 			${fetched.map(
       (item) => serialize_data(item, resolve_opts.filterSerializedResponseHeaders, !!state.prerendering)
     ).join("\n			")}`;
   }
   if (page_config.csr) {
+    if (client.uses_env_dynamic_public && state.prerendering) {
+      modulepreloads.add(`${options2.app_dir}/env.js`);
+    }
     const included_modulepreloads = Array.from(modulepreloads, (dep) => prefixed(dep)).filter(
       (path) => resolve_opts.preload({ type: "js", path })
     );
@@ -6757,7 +7526,7 @@ async function render_response({
     const properties = [
       assets && `assets: ${s(assets)}`,
       `base: ${base_expression}`,
-      `env: ${s(public_env)}`
+      `env: ${!client.uses_env_dynamic_public || state.prerendering ? null : s(public_env)}`
     ].filter(Boolean);
     if (chunks) {
       blocks.push("const deferred = new Map();");
@@ -6787,8 +7556,8 @@ async function render_response({
           event.route.id
         );
       }
-      if (error2) {
-        serialized.error = uneval(error2);
+      if (error) {
+        serialized.error = uneval(error);
       }
       const hydrate = [
         `node_ids: [${branch.map(({ node }) => node.index).join(", ")}]`,
@@ -6826,13 +7595,13 @@ async function render_response({
 				}
 			`;
     csp.add_script(init_app);
-    body += `
+    body2 += `
 			<script${csp.script_needs_nonce ? ` nonce="${csp.nonce}"` : ""}>${init_app}<\/script>
 		`;
   }
-  const headers = new Headers({
+  const headers2 = new Headers({
     "x-sveltekit-page": "true",
-    "content-type": "text/stands"
+    "content-type": "text/html"
   });
   if (state.prerendering) {
     const http_equiv = [];
@@ -6849,37 +7618,37 @@ async function render_response({
   } else {
     const csp_header = csp.csp_provider.get_header();
     if (csp_header) {
-      headers.set("content-security-policy", csp_header);
+      headers2.set("content-security-policy", csp_header);
     }
     const report_only_header = csp.report_only_provider.get_header();
     if (report_only_header) {
-      headers.set("content-security-policy-report-only", report_only_header);
+      headers2.set("content-security-policy-report-only", report_only_header);
     }
     if (link_header_preloads.size) {
-      headers.set("link", Array.from(link_header_preloads).join(", "));
+      headers2.set("link", Array.from(link_header_preloads).join(", "));
     }
   }
   head += rendered.head;
   const html = options2.templates.app({
     head,
-    body,
+    body: body2,
     assets: assets$1,
     nonce: (
       /** @type {string} */
       csp.nonce
     ),
-    env: public_env
+    env: safe_public_env
   });
   const transformed = await resolve_opts.transformPageChunk({
     html,
     done: true
   }) || "";
   if (!chunks) {
-    headers.set("etag", `"${hash(transformed)}"`);
+    headers2.set("etag", `"${hash(transformed)}"`);
   }
   return !chunks ? text(transformed, {
     status,
-    headers
+    headers: headers2
   }) : new Response(
     new ReadableStream({
       async start(controller) {
@@ -6893,7 +7662,7 @@ async function render_response({
     }),
     {
       headers: {
-        "content-type": "text/stands"
+        "content-type": "text/html"
       }
     }
   );
@@ -6911,26 +7680,26 @@ function get_data(event, options2, nodes, global2) {
         (data) => ({ data })
       ).catch(
         /** @param {any} error */
-        async (error2) => ({
-          error: await handle_error_and_jsonify(event, options2, error2)
+        async (error) => ({
+          error: await handle_error_and_jsonify(event, options2, error)
         })
       ).then(
         /**
          * @param {{data: any; error: any}} result
          */
-        async ({ data, error: error2 }) => {
+        async ({ data, error }) => {
           count -= 1;
           let str;
           try {
-            str = uneval({ id, data, error: error2 }, replacer);
+            str = uneval({ id, data, error }, replacer);
           } catch (e3) {
-            error2 = await handle_error_and_jsonify(
+            error = await handle_error_and_jsonify(
               event,
               options2,
               new Error(`Failed to serialize promise while rendering ${event.route.id}`)
             );
             data = void 0;
-            str = uneval({ id, data, error: error2 }, replacer);
+            str = uneval({ id, data, error }, replacer);
           }
           push(`<script>${global2}.resolve(${str})<\/script>
 `);
@@ -6977,7 +7746,7 @@ async function respond_with_error({
   manifest: manifest2,
   state,
   status,
-  error: error2,
+  error,
   resolve_opts
 }) {
   if (event.request.headers.get("x-sveltekit-error")) {
@@ -6985,23 +7754,22 @@ async function respond_with_error({
       options2,
       status,
       /** @type {Error} */
-      error2.message
+      error.message
     );
   }
   const fetched = [];
   try {
     const branch = [];
     const default_layout = await manifest2._.nodes[0]();
-    const ssr3 = get_option([default_layout], "ssr") ?? true;
+    const ssr2 = get_option([default_layout], "ssr") ?? true;
     const csr = get_option([default_layout], "csr") ?? true;
-    if (ssr3) {
+    if (ssr2) {
       state.error = true;
       const server_data_promise = load_server_data({
         event,
         state,
         node: default_layout,
-        parent: async () => ({}),
-        track_server_fetches: options2.track_server_fetches
+        parent: async () => ({})
       });
       const server_data = await server_data_promise;
       const data = await load_data({
@@ -7033,11 +7801,11 @@ async function respond_with_error({
       manifest: manifest2,
       state,
       page_config: {
-        ssr: ssr3,
-        csr: get_option([default_layout], "csr") ?? true
+        ssr: ssr2,
+        csr
       },
       status,
-      error: await handle_error_and_jsonify(event, options2, error2),
+      error: await handle_error_and_jsonify(event, options2, error),
       branch,
       fetched,
       event,
@@ -7049,7 +7817,7 @@ async function respond_with_error({
     }
     return static_error_page(
       options2,
-      e3 instanceof HttpError ? e3.status : 500,
+      get_status(e3),
       (await handle_error_and_jsonify(event, options2, e3)).message
     );
   }
@@ -7106,8 +7874,7 @@ async function render_data(event, route, options2, manifest2, state, invalidated
                 }
               }
               return data2;
-            },
-            track_server_fetches: options2.track_server_fetches
+            }
           });
         } catch (e3) {
           aborted = true;
@@ -7129,17 +7896,17 @@ async function render_data(event, route, options2, manifest2, state, invalidated
     let length = promises.length;
     const nodes = await Promise.all(
       promises.map(
-        (p2, i2) => p2.catch(async (error2) => {
-          if (error2 instanceof Redirect) {
-            throw error2;
+        (p2, i2) => p2.catch(async (error) => {
+          if (error instanceof Redirect) {
+            throw error;
           }
           length = Math.min(length, i2 + 1);
           return (
             /** @type {import('types').ServerErrorNode} */
             {
               type: "error",
-              error: await handle_error_and_jsonify(event, options2, error2),
-              status: error2 instanceof HttpError ? error2.status : void 0
+              error: await handle_error_and_jsonify(event, options2, error),
+              status: error instanceof HttpError || error instanceof SvelteKitError ? error.status : void 0
             }
           );
         })
@@ -7170,11 +7937,11 @@ async function render_data(event, route, options2, manifest2, state, invalidated
       }
     );
   } catch (e3) {
-    const error2 = normalize_error(e3);
-    if (error2 instanceof Redirect) {
-      return redirect_json_response(error2);
+    const error = normalize_error(e3);
+    if (error instanceof Redirect) {
+      return redirect_json_response(error);
     } else {
-      return json_response(await handle_error_and_jsonify(event, options2, error2), 500);
+      return json_response(await handle_error_and_jsonify(event, options2, error), 500);
     }
   }
 }
@@ -7222,13 +7989,13 @@ function get_data_json(event, options2, nodes) {
             try {
               str = stringify(value, reducers);
             } catch (e3) {
-              const error2 = await handle_error_and_jsonify(
+              const error = await handle_error_and_jsonify(
                 event,
                 options2,
                 new Error(`Failed to serialize promise while rendering ${event.route.id}`)
               );
               key2 = "error";
-              str = stringify(error2, reducers);
+              str = stringify(error, reducers);
             }
             count -= 1;
             push(`{"type":"chunk","id":${id},"${key2}":${str}}
@@ -7295,8 +8062,7 @@ async function render_page(event, page2, options2, manifest2, state, resolve_opt
         return redirect_response(action_result.status, action_result.location);
       }
       if (action_result?.type === "error") {
-        const error2 = action_result.error;
-        status = error2 instanceof HttpError ? error2.status : 500;
+        status = get_status(action_result.error);
       }
       if (action_result?.type === "failure") {
         status = action_result.status;
@@ -7317,7 +8083,7 @@ async function render_page(event, page2, options2, manifest2, state, resolve_opt
     }
     state.prerender_default = should_prerender;
     const fetched = [];
-    if (get_option(nodes, "ssr") === false) {
+    if (get_option(nodes, "ssr") === false && !state.prerendering) {
       return await render_response({
         branch: [],
         fetched,
@@ -7357,8 +8123,7 @@ async function render_page(event, page2, options2, manifest2, state, resolve_opt
                   Object.assign(data, await parent.data);
               }
               return data;
-            },
-            track_server_fetches: options2.track_server_fetches
+            }
           });
         } catch (e3) {
           load_error = /** @type {Error} */
@@ -7413,26 +8178,26 @@ async function render_page(event, page2, options2, manifest2, state, resolve_opt
           const err = normalize_error(e3);
           if (err instanceof Redirect) {
             if (state.prerendering && should_prerender_data) {
-              const body = JSON.stringify({
+              const body2 = JSON.stringify({
                 type: "redirect",
                 location: err.location
               });
               state.prerendering.dependencies.set(data_pathname, {
-                response: text(body),
-                body
+                response: text(body2),
+                body: body2
               });
             }
             return redirect_response(err.status, err.location);
           }
-          const status2 = err instanceof HttpError ? err.status : 500;
-          const error2 = await handle_error_and_jsonify(event, options2, err);
+          const status2 = get_status(err);
+          const error = await handle_error_and_jsonify(event, options2, err);
           while (i2--) {
             if (page2.errors[i2]) {
-              const index9 = (
+              const index7 = (
                 /** @type {number} */
                 page2.errors[i2]
               );
-              const node2 = await manifest2._.nodes[index9]();
+              const node2 = await manifest2._.nodes[index7]();
               let j2 = i2;
               while (!branch[j2])
                 j2 -= 1;
@@ -7444,7 +8209,7 @@ async function render_page(event, page2, options2, manifest2, state, resolve_opt
                 resolve_opts,
                 page_config: { ssr: true, csr: true },
                 status: status2,
-                error: error2,
+                error,
                 branch: compact(branch.slice(0, j2 + 1)).concat({
                   node: node2,
                   data: null,
@@ -7454,7 +8219,7 @@ async function render_page(event, page2, options2, manifest2, state, resolve_opt
               });
             }
           }
-          return static_error_page(options2, status2, error2.message);
+          return static_error_page(options2, status2, error.message);
         }
       } else {
         branch.push(null);
@@ -7484,7 +8249,7 @@ async function render_page(event, page2, options2, manifest2, state, resolve_opt
       resolve_opts,
       page_config: {
         csr: get_option(nodes, "csr") ?? true,
-        ssr: true
+        ssr: get_option(nodes, "ssr") ?? true
       },
       status,
       error: null,
@@ -7504,11 +8269,54 @@ async function render_page(event, page2, options2, manifest2, state, resolve_opt
     });
   }
 }
+function exec(match, params, matchers) {
+  const result = {};
+  const values = match.slice(1);
+  const values_needing_match = values.filter((value) => value !== void 0);
+  let buffered = 0;
+  for (let i2 = 0; i2 < params.length; i2 += 1) {
+    const param = params[i2];
+    let value = values[i2 - buffered];
+    if (param.chained && param.rest && buffered) {
+      value = values.slice(i2 - buffered, i2 + 1).filter((s22) => s22).join("/");
+      buffered = 0;
+    }
+    if (value === void 0) {
+      if (param.rest)
+        result[param.name] = "";
+      continue;
+    }
+    if (!param.matcher || matchers[param.matcher](value)) {
+      result[param.name] = value;
+      const next_param = params[i2 + 1];
+      const next_value = values[i2 + 1];
+      if (next_param && !next_param.rest && next_param.optional && next_value && param.chained) {
+        buffered = 0;
+      }
+      if (!next_param && !next_value && Object.keys(result).length === values_needing_match.length) {
+        buffered = 0;
+      }
+      continue;
+    }
+    if (param.optional && param.chained) {
+      buffered++;
+      continue;
+    }
+    return;
+  }
+  if (buffered)
+    return;
+  return result;
+}
+function validate_options(options2) {
+  if (options2?.path === void 0) {
+    throw new Error("You must specify a `path` when setting, deleting or serializing cookies");
+  }
+}
 function get_cookies(request, url, trailing_slash) {
   const header = request.headers.get("cookie") ?? "";
   const initial_cookies = (0, import_cookie.parse)(header, { decode: (value) => value });
   const normalized_url = normalize_path(url.pathname, trailing_slash);
-  const default_path = normalized_url.split("/").slice(0, -1).join("/") || "/";
   const new_cookies = {};
   const defaults = {
     httpOnly: true,
@@ -7550,31 +8358,32 @@ function get_cookies(request, url, trailing_slash) {
     /**
      * @param {string} name
      * @param {string} value
-     * @param {import('cookie').CookieSerializeOptions} opts
+     * @param {import('./page/types.js').Cookie['options']} options
      */
-    set(name, value, opts = {}) {
-      set_internal(name, value, { ...defaults, ...opts });
+    set(name, value, options2) {
+      validate_options(options2);
+      set_internal(name, value, { ...defaults, ...options2 });
     },
     /**
      * @param {string} name
-     * @param {import('cookie').CookieSerializeOptions} opts
+     *  @param {import('./page/types.js').Cookie['options']} options
      */
-    delete(name, opts = {}) {
-      cookies.set(name, "", {
-        ...opts,
-        maxAge: 0
-      });
+    delete(name, options2) {
+      validate_options(options2);
+      cookies.set(name, "", { ...options2, maxAge: 0 });
     },
     /**
      * @param {string} name
      * @param {string} value
-     * @param {import('cookie').CookieSerializeOptions} opts
+     *  @param {import('./page/types.js').Cookie['options']} options
      */
-    serialize(name, value, opts) {
-      return (0, import_cookie.serialize)(name, value, {
-        ...defaults,
-        ...opts
-      });
+    serialize(name, value, options2) {
+      validate_options(options2);
+      let path = options2.path;
+      if (!options2.domain || options2.domain === url.hostname) {
+        path = resolve(normalized_url, path);
+      }
+      return (0, import_cookie.serialize)(name, value, { ...defaults, ...options2, path });
     }
   };
   function get_cookie_header(destination, header2) {
@@ -7599,16 +8408,12 @@ function get_cookies(request, url, trailing_slash) {
     }
     return Object.entries(combined_cookies).map(([name, value]) => `${name}=${value}`).join("; ");
   }
-  function set_internal(name, value, opts) {
-    const path = opts.path ?? default_path;
-    new_cookies[name] = {
-      name,
-      value,
-      options: {
-        ...opts,
-        path
-      }
-    };
+  function set_internal(name, value, options2) {
+    let path = options2.path;
+    if (!options2.domain || options2.domain === url.hostname) {
+      path = resolve(normalized_url, path);
+    }
+    new_cookies[name] = { name, value, options: { ...options2, path } };
   }
   return { cookies, new_cookies, get_cookie_header, set_internal };
 }
@@ -7628,18 +8433,22 @@ function path_matches(path, constraint) {
     return true;
   return path.startsWith(normalized + "/");
 }
-function add_cookies_to_headers(headers, cookies) {
+function add_cookies_to_headers(headers2, cookies) {
   for (const new_cookie of cookies) {
     const { name, value, options: options2 } = new_cookie;
-    headers.append("set-cookie", (0, import_cookie.serialize)(name, value, options2));
+    headers2.append("set-cookie", (0, import_cookie.serialize)(name, value, options2));
+    if (options2.path.endsWith(".html")) {
+      const path = add_data_suffix(options2.path);
+      headers2.append("set-cookie", (0, import_cookie.serialize)(name, value, { ...options2, path }));
+    }
   }
 }
 function create_fetch({ event, options: options2, manifest: manifest2, state, get_cookie_header, set_internal }) {
-  return async (info, init2) => {
+  const server_fetch = async (info, init2) => {
     const original_request = normalize_fetch_input(info, init2, event.url);
     let mode = (info instanceof Request ? info.mode : init2?.mode) ?? "cors";
     let credentials = (info instanceof Request ? info.credentials : init2?.credentials) ?? "same-origin";
-    return await options2.hooks.handleFetch({
+    return options2.hooks.handleFetch({
       event,
       request: original_request,
       fetch: async (info2, init3) => {
@@ -7672,7 +8481,7 @@ function create_fetch({ event, options: options2, manifest: manifest2, state, ge
         if (is_asset || is_asset_html) {
           const file = is_asset ? filename : filename_html;
           if (state.read) {
-            const type = is_asset ? manifest2.mimeTypes[filename.slice(filename.lastIndexOf("."))] : "text/stands";
+            const type = is_asset ? manifest2.mimeTypes[filename.slice(filename.lastIndexOf("."))] : "text/html";
             return new Response(state.read(file), {
               headers: type ? { "content-type": type } : {}
             });
@@ -7707,17 +8516,23 @@ function create_fetch({ event, options: options2, manifest: manifest2, state, ge
         if (set_cookie) {
           for (const str of set_cookie_parser.splitCookiesString(set_cookie)) {
             const { name, value, ...options3 } = set_cookie_parser.parseString(str);
-            set_internal(
-              name,
-              value,
-              /** @type {import('cookie').CookieSerializeOptions} */
+            const path = options3.path ?? (url.pathname.split("/").slice(0, -1).join("/") || "/");
+            set_internal(name, value, {
+              path,
+              .../** @type {import('cookie').CookieSerializeOptions} */
               options3
-            );
+            });
           }
         }
         return response;
       }
     });
+  };
+  return (input, init2) => {
+    const response = server_fetch(input, init2);
+    response.catch(() => {
+    });
+    return response;
   };
 }
 function normalize_fetch_input(info, init2, url) {
@@ -7791,6 +8606,21 @@ var validate_page_exports = validator(valid_page_exports);
 var validate_layout_server_exports = validator(valid_layout_server_exports);
 var validate_page_server_exports = validator(valid_page_server_exports);
 var validate_server_exports = validator(valid_server_exports);
+var body;
+var etag;
+var headers;
+function get_public_env(request) {
+  body ??= `export const env=${JSON.stringify(public_env)}`;
+  etag ??= `W/${Date.now()}`;
+  headers ??= new Headers({
+    "content-type": "application/javascript; charset=utf-8",
+    etag
+  });
+  if (request.headers.get("if-none-match") === etag) {
+    return new Response(void 0, { status: 304, headers });
+  }
+  return new Response(body, { headers });
+}
 var default_transform = ({ html }) => html;
 var default_filter = () => false;
 var default_preload = ({ type }) => type === "js" || type === "css";
@@ -7801,7 +8631,10 @@ async function respond(request, options2, manifest2, state) {
   if (options2.csrf_check_origin) {
     const forbidden = is_form_content_type(request) && (request.method === "POST" || request.method === "PUT" || request.method === "PATCH" || request.method === "DELETE") && request.headers.get("origin") !== url.origin;
     if (forbidden) {
-      const csrf_error = error(403, `Cross-site ${request.method} form submissions are forbidden`);
+      const csrf_error = new HttpError(
+        403,
+        `Cross-site ${request.method} form submissions are forbidden`
+      );
       if (request.headers.get("accept") === "application/json") {
         return json(csrf_error.body, { status: csrf_error.status });
       }
@@ -7821,6 +8654,9 @@ async function respond(request, options2, manifest2, state) {
       return text("Not found", { status: 404 });
     }
     decoded = decoded.slice(base.length) || "/";
+  }
+  if (decoded === `/${options2.app_dir}/env.js`) {
+    return get_public_env(request);
   }
   const is_data_request = has_data_suffix(decoded);
   let invalidated_data_nodes;
@@ -7846,7 +8682,7 @@ async function respond(request, options2, manifest2, state) {
     }
   }
   let trailing_slash = void 0;
-  const headers = {};
+  const headers2 = {};
   let cookies_to_add = {};
   const event = {
     // @ts-expect-error `cookies` and `fetch` need to be created after the `event` itself
@@ -7871,10 +8707,10 @@ async function respond(request, options2, manifest2, state) {
           throw new Error(
             "Use `event.cookies.set(name, value, options)` instead of `event.setHeaders` to set cookies"
           );
-        } else if (lower in headers) {
+        } else if (lower in headers2) {
           throw new Error(`"${key2}" header is already set`);
         } else {
-          headers[lower] = value;
+          headers2[lower] = value;
           if (state.prerendering && lower === "cache-control") {
             state.prerendering.cache = /** @type {string} */
             value;
@@ -7945,9 +8781,9 @@ async function respond(request, options2, manifest2, state) {
       disable_search(url);
     const response = await options2.hooks.handle({
       event,
-      resolve: (event2, opts) => resolve(event2, opts).then((response2) => {
-        for (const key2 in headers) {
-          const value = headers[key2];
+      resolve: (event2, opts) => resolve2(event2, opts).then((response2) => {
+        for (const key2 in headers2) {
+          const value = headers2[key2];
           response2.headers.set(
             key2,
             /** @type {string} */
@@ -7966,12 +8802,12 @@ async function respond(request, options2, manifest2, state) {
       if (if_none_match_value?.startsWith('W/"')) {
         if_none_match_value = if_none_match_value.substring(2);
       }
-      const etag = (
+      const etag2 = (
         /** @type {string} */
         response.headers.get("etag")
       );
-      if (if_none_match_value === etag) {
-        const headers2 = new Headers({ etag });
+      if (if_none_match_value === etag2) {
+        const headers3 = new Headers({ etag: etag2 });
         for (const key2 of [
           "cache-control",
           "content-location",
@@ -7982,11 +8818,11 @@ async function respond(request, options2, manifest2, state) {
         ]) {
           const value = response.headers.get(key2);
           if (value)
-            headers2.set(key2, value);
+            headers3.set(key2, value);
         }
         return new Response(void 0, {
           status: 304,
-          headers: headers2
+          headers: headers3
         });
       }
     }
@@ -8009,14 +8845,9 @@ async function respond(request, options2, manifest2, state) {
     }
     return await handle_fatal_error(event, options2, e3);
   }
-  async function resolve(event2, opts) {
+  async function resolve2(event2, opts) {
     try {
       if (opts) {
-        if ("ssr" in opts) {
-          throw new Error(
-            "ssr has been removed, set it in the appropriate +layout.js instead. See the PR for more information: https://github.com/sveltejs/kit/pull/6197"
-          );
-        }
         resolve_opts = {
           transformPageChunk: opts.transformPageChunk || default_transform,
           filterSerializedResponseHeaders: opts.filterSerializedResponseHeaders || default_filter,
@@ -8118,7 +8949,7 @@ async function respond(request, options2, manifest2, state) {
           manifest: manifest2,
           state,
           status: 404,
-          error: new Error(`Not found: ${event2.url.pathname}`),
+          error: new SvelteKitError(404, "Not Found", `Not found: ${event2.url.pathname}`),
           resolve_opts
         });
       }
@@ -8152,6 +8983,13 @@ function filter_public_env(env, { public_prefix, private_prefix }) {
     )
   );
 }
+var prerender_env_handler = {
+  get({ type }, prop) {
+    throw new Error(
+      `Cannot read values from $env/dynamic/${type} while prerendering (attempted to read env.${prop.toString()}). Use $env/static/${type} instead`
+    );
+  }
+};
 var Server = class {
   /** @type {import('types').SSROptions} */
   #options;
@@ -8168,29 +9006,26 @@ var Server = class {
    * }} opts
    */
   async init({ env }) {
-    set_private_env(
-      filter_private_env(env, {
-        public_prefix: this.#options.env_public_prefix,
-        private_prefix: this.#options.env_private_prefix
-      })
-    );
-    set_public_env(
-      filter_public_env(env, {
-        public_prefix: this.#options.env_public_prefix,
-        private_prefix: this.#options.env_private_prefix
-      })
-    );
+    const prefixes = {
+      public_prefix: this.#options.env_public_prefix,
+      private_prefix: this.#options.env_private_prefix
+    };
+    const private_env = filter_private_env(env, prefixes);
+    const public_env2 = filter_public_env(env, prefixes);
+    set_private_env(building ? new Proxy({ type: "private" }, prerender_env_handler) : private_env);
+    set_public_env(building ? new Proxy({ type: "public" }, prerender_env_handler) : public_env2);
+    set_safe_public_env(public_env2);
     if (!this.#options.hooks) {
       try {
         const module = await get_hooks();
         this.#options.hooks = {
-          handle: module.handle || (({ event, resolve }) => resolve(event)),
-          handleError: module.handleError || (({ error: error2 }) => console.error(error2)),
+          handle: module.handle || (({ event, resolve: resolve2 }) => resolve2(event)),
+          handleError: module.handleError || (({ error }) => console.error(error)),
           handleFetch: module.handleFetch || (({ request, fetch: fetch2 }) => fetch2(request))
         };
-      } catch (error2) {
+      } catch (error) {
         {
-          throw error2;
+          throw error;
         }
       }
     }
@@ -8200,11 +9035,6 @@ var Server = class {
    * @param {import('types').RequestOptions} options
    */
   async respond(request, options2) {
-    if (!(request instanceof Request)) {
-      throw new Error(
-        "The first argument to server.respond must be a Request object. See https://github.com/sveltejs/kit/pull/3384 for details"
-      );
-    }
     return respond(request, this.#options, this.#manifest, {
       ...options2,
       error: false,
@@ -8220,21 +9050,19 @@ var manifest = (() => {
     return () => value ??= value = fn();
   }
   return {
-    appDir: "_app",
-    appPath: "_app",
-    assets: /* @__PURE__ */ new Set(["icon.svg", "robots.txt"]),
-    mimeTypes: { ".svg": "image/svg+xml", ".txt": "text/plain" },
+    appDir: "_svelte",
+    appPath: "_svelte",
+    assets: /* @__PURE__ */ new Set(["favicon.ico"]),
+    mimeTypes: {},
     _: {
-      client: { "start": "_app/immutable/entry/start.772c388b.js", "app": "_app/immutable/entry/app.69a2ed23.js", "imports": ["_app/immutable/entry/start.772c388b.js", "_app/immutable/chunks/scheduler.0d2f776c.js", "_app/immutable/chunks/singletons.50650c4a.js", "_app/immutable/entry/app.69a2ed23.js", "_app/immutable/chunks/scheduler.0d2f776c.js", "_app/immutable/chunks/index.e8a83480.js"], "stylesheets": [], "fonts": [] },
+      client: { "start": "_svelte/immutable/entry/start.b3382858.js", "app": "_svelte/immutable/entry/app.b083d340.js", "imports": ["_svelte/immutable/entry/start.b3382858.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/singletons.c79871f0.js", "_svelte/immutable/chunks/index.5ba2287e.js", "_svelte/immutable/entry/app.b083d340.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js"], "stylesheets": [], "fonts": [], "uses_env_dynamic_public": false },
       nodes: [
         __memo(() => Promise.resolve().then(() => (init__(), __exports))),
         __memo(() => Promise.resolve().then(() => (init__2(), __exports2))),
         __memo(() => Promise.resolve().then(() => (init__3(), __exports3))),
         __memo(() => Promise.resolve().then(() => (init__4(), __exports4))),
         __memo(() => Promise.resolve().then(() => (init__5(), __exports5))),
-        __memo(() => Promise.resolve().then(() => (init__6(), __exports6))),
-        __memo(() => Promise.resolve().then(() => (init__7(), __exports7))),
-        __memo(() => Promise.resolve().then(() => (init__8(), __exports8)))
+        __memo(() => Promise.resolve().then(() => (init__6(), __exports6)))
       ],
       routes: [
         {
@@ -8242,7 +9070,7 @@ var manifest = (() => {
           pattern: /^\/$/,
           params: [],
           page: { layouts: [0], errors: [1], leaf: 2 },
-          endpoint: null
+          endpoint: __memo(() => Promise.resolve().then(() => (init_server(), server_exports)))
         },
         {
           id: "/contact",
@@ -8252,31 +9080,17 @@ var manifest = (() => {
           endpoint: null
         },
         {
-          id: "/home",
-          pattern: /^\/home\/?$/,
+          id: "/index",
+          pattern: /^\/index\/?$/,
           params: [],
           page: { layouts: [0], errors: [1], leaf: 4 },
-          endpoint: null
-        },
-        {
-          id: "/pg",
-          pattern: /^\/pg\/?$/,
-          params: [],
-          page: { layouts: [0], errors: [1], leaf: 5 },
           endpoint: null
         },
         {
           id: "/works",
           pattern: /^\/works\/?$/,
           params: [],
-          page: { layouts: [0], errors: [1], leaf: 6 },
-          endpoint: null
-        },
-        {
-          id: "/works/[id]",
-          pattern: /^\/works\/([^/]+?)\/?$/,
-          params: [{ "name": "id", "optional": false, "rest": false, "chained": false }],
-          page: { layouts: [0], errors: [1], leaf: 7 },
+          page: { layouts: [0], errors: [1], leaf: 5 },
           endpoint: null
         }
       ],
@@ -8329,7 +9143,7 @@ var worker = {
     let res = !pragma.includes("no-cache") && await r22(req);
     if (res)
       return res;
-    let { pathname } = new URL(req.url);
+    let { pathname, search } = new URL(req.url);
     try {
       pathname = decodeURIComponent(pathname);
     } catch {
@@ -8338,12 +9152,14 @@ var worker = {
     let is_static_asset = false;
     const filename = stripped_pathname.substring(1);
     if (filename) {
-      is_static_asset = manifest.assets.has(filename) || manifest.assets.has(filename + "/index.stands");
+      is_static_asset = manifest.assets.has(filename) || manifest.assets.has(filename + "/index.html");
     }
-    const location = pathname.at(-1) === "/" ? stripped_pathname : pathname + "/";
+    let location = pathname.at(-1) === "/" ? stripped_pathname : pathname + "/";
     if (is_static_asset || prerendered.has(pathname)) {
       res = await env.ASSETS.fetch(req);
     } else if (location && prerendered.has(location)) {
+      if (search)
+        location += search;
       res = new Response("", {
         status: 308,
         headers: {

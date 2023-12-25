@@ -26,8 +26,6 @@
             return acc;
         }, {});
 
-        console.log(res.contents)
-
         language = groupedData["language"] || [];
         library = groupedData["library"] || [];
         framework = groupedData["framework"] || [];

@@ -1,15 +1,14 @@
 <script>
     import Title from "$lib/title.svelte"
-    import {onMount} from "svelte";
+    import { onMount } from "svelte";
     import { cms } from "$lib/cms/cms.js";
-    import {faCircleNotch} from "@fortawesome/free-solid-svg-icons";
+    import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
     import Fa from "svelte-fa";
     import { fade } from "svelte/transition";
-    import {faClone} from "@fortawesome/free-regular-svg-icons";
     import PageTitle from "../../components/pageTitle.svelte";
+    import {worksData} from "$lib/stores/works.js";
     let datas = [];
-
-    onMount(async() => {
+    onMount(async () => {
         const res = await cms.get({ endpoint: "works" });
         datas = res.contents;
     })
@@ -20,7 +19,7 @@
 <section>
     <div class="items">
         <PageTitle title="Works"/>
-        {#key datas}
+        {#key data}
             <div in:fade={{ duration: 200 }} out:fade={{ duration: 200 }}>
                 {#if datas.length > 0}
                     <div class="contents">
