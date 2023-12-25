@@ -1,4 +1,4 @@
-import { c as create_ssr_component, v as validate_component, b as add_attribute, a as subscribe, d as escape, e as each } from "../../../chunks/ssr.js";
+import { c as create_ssr_component, v as validate_component, b as add_attribute, a as subscribe, e as escape, d as each } from "../../../chunks/ssr.js";
 import { P as PageTitle, T as Title } from "../../../chunks/pageTitle.js";
 import { w as writable } from "../../../chunks/index.js";
 import { F as Fa } from "../../../chunks/fa.js";

@@ -1,4 +1,4 @@
-import { c as create_ssr_component, v as validate_component, e as each, b as add_attribute, d as escape } from "../../../chunks/ssr.js";
+import { c as create_ssr_component, v as validate_component, d as each, b as add_attribute, e as escape } from "../../../chunks/ssr.js";
 import { T as Title, P as PageTitle } from "../../../chunks/pageTitle.js";
 import "../../../chunks/cms.js";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";

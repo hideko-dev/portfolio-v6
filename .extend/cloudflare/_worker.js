@@ -691,8 +691,13 @@ var require_set_cookie = __commonJS({
 
 // .extend/output/server/entries/pages/_layout.js
 var layout_exports = {};
+__export(layout_exports, {
+  ssr: () => ssr
+});
+var ssr;
 var init_layout = __esm({
   ".extend/output/server/entries/pages/_layout.js"() {
+    ssr = true;
   }
 });
 
@@ -1558,7 +1563,7 @@ var init__ = __esm({
     component = async () => component_cache ??= (await Promise.resolve().then(() => (init_layout_svelte(), layout_svelte_exports))).default;
     universal_id = "src/pages/+layout.js";
     server_id = "src/pages/+layout.server.js";
-    imports = ["_svelte/immutable/nodes/0.d545eb90.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js", "_svelte/immutable/chunks/index.5ba2287e.js", "_svelte/immutable/chunks/index.9014b818.js", "_svelte/immutable/chunks/singletons.52da4b92.js", "_svelte/immutable/chunks/Toaster.svelte_svelte_type_style_lang.c1062644.js"];
+    imports = ["_svelte/immutable/nodes/0.f6f58ae1.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js", "_svelte/immutable/chunks/index.5ba2287e.js", "_svelte/immutable/chunks/index.9014b818.js", "_svelte/immutable/chunks/singletons.c79871f0.js", "_svelte/immutable/chunks/Toaster.svelte_svelte_type_style_lang.c1062644.js"];
     stylesheets = ["_svelte/immutable/assets/0.730475c8.css", "_svelte/immutable/assets/index.32503cb2.css", "_svelte/immutable/assets/Toaster.5032d475.css"];
     fonts = ["_svelte/immutable/assets/inter-latin-100-normal.427261e2.woff2", "_svelte/immutable/assets/inter-latin-100-normal.92f0bcbb.woff", "_svelte/immutable/assets/inter-latin-200-normal.63325fd5.woff2", "_svelte/immutable/assets/inter-latin-200-normal.d7612e1d.woff", "_svelte/immutable/assets/inter-latin-300-normal.09eea703.woff2", "_svelte/immutable/assets/inter-latin-300-normal.5d9c64fb.woff", "_svelte/immutable/assets/inter-latin-400-normal.2301bb03.woff2", "_svelte/immutable/assets/inter-latin-400-normal.86efb4c9.woff", "_svelte/immutable/assets/inter-latin-500-normal.eebf14ab.woff2", "_svelte/immutable/assets/inter-latin-500-normal.1637831b.woff", "_svelte/immutable/assets/inter-latin-600-normal.3022fadd.woff2", "_svelte/immutable/assets/inter-latin-600-normal.93b3d09b.woff", "_svelte/immutable/assets/inter-latin-700-normal.7b43cb86.woff2", "_svelte/immutable/assets/inter-latin-700-normal.eb518b64.woff", "_svelte/immutable/assets/inter-latin-800-normal.03db2737.woff2", "_svelte/immutable/assets/inter-latin-800-normal.c139f4bb.woff", "_svelte/immutable/assets/inter-latin-900-normal.c67b5d31.woff2", "_svelte/immutable/assets/inter-latin-900-normal.2e4b4c87.woff", "_svelte/immutable/assets/poppins-latin-100-normal.a9220f99.woff2", "_svelte/immutable/assets/poppins-latin-100-normal.d1eda978.woff", "_svelte/immutable/assets/poppins-latin-200-normal.6f0c5725.woff2", "_svelte/immutable/assets/poppins-latin-200-normal.07512a37.woff", "_svelte/immutable/assets/poppins-latin-300-normal.78bc3aa7.woff2", "_svelte/immutable/assets/poppins-latin-300-normal.78a4e0ac.woff", "_svelte/immutable/assets/poppins-latin-400-normal.7d93459d.woff2", "_svelte/immutable/assets/poppins-latin-400-normal.2db0a254.woff", "_svelte/immutable/assets/poppins-latin-500-normal.cd36de20.woff2", "_svelte/immutable/assets/poppins-latin-500-normal.6f35fc59.woff", "_svelte/immutable/assets/poppins-latin-600-normal.f4e80d9d.woff2", "_svelte/immutable/assets/poppins-latin-600-normal.90ae1c77.woff", "_svelte/immutable/assets/poppins-latin-700-normal.9338e65f.woff2", "_svelte/immutable/assets/poppins-latin-700-normal.630ac4e1.woff", "_svelte/immutable/assets/poppins-latin-800-normal.60bf0aba.woff2", "_svelte/immutable/assets/poppins-latin-800-normal.993bd790.woff", "_svelte/immutable/assets/poppins-latin-900-normal.17ea1019.woff2", "_svelte/immutable/assets/poppins-latin-900-normal.940cfac0.woff"];
   }
@@ -1617,7 +1622,7 @@ var init__2 = __esm({
   ".extend/output/server/nodes/1.js"() {
     index2 = 1;
     component2 = async () => component_cache2 ??= (await Promise.resolve().then(() => (init_error_svelte(), error_svelte_exports))).default;
-    imports2 = ["_svelte/immutable/nodes/1.e9d007d6.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js", "_svelte/immutable/chunks/singletons.52da4b92.js", "_svelte/immutable/chunks/index.5ba2287e.js"];
+    imports2 = ["_svelte/immutable/nodes/1.e9294e21.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js", "_svelte/immutable/chunks/singletons.c79871f0.js", "_svelte/immutable/chunks/index.5ba2287e.js"];
     stylesheets2 = [];
     fonts2 = [];
   }
@@ -5385,7 +5390,7 @@ var init__6 = __esm({
   ".extend/output/server/nodes/5.js"() {
     index6 = 5;
     component6 = async () => component_cache6 ??= (await Promise.resolve().then(() => (init_page_svelte4(), page_svelte_exports4))).default;
-    imports6 = ["_svelte/immutable/nodes/5.14e31fdc.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js", "_svelte/immutable/chunks/index.9014b818.js", "_svelte/immutable/chunks/pageTitle.503e0206.js", "_svelte/immutable/chunks/cms.6cec21ef.js"];
+    imports6 = ["_svelte/immutable/nodes/5.0edfef69.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js", "_svelte/immutable/chunks/index.9014b818.js", "_svelte/immutable/chunks/pageTitle.503e0206.js", "_svelte/immutable/chunks/cms.6cec21ef.js"];
     stylesheets6 = ["_svelte/immutable/assets/5.00038da3.css", "_svelte/immutable/assets/index.32503cb2.css", "_svelte/immutable/assets/pageTitle.0bbcfdf8.css"];
     fonts6 = [];
   }
@@ -5393,13 +5398,8 @@ var init__6 = __esm({
 
 // .extend/output/server/entries/endpoints/_server.js
 var server_exports = {};
-__export(server_exports, {
-  prerender: () => prerender
-});
-var prerender;
 var init_server = __esm({
   ".extend/output/server/entries/endpoints/_server.js"() {
-    prerender = true;
   }
 });
 
@@ -5516,7 +5516,7 @@ var options = {
   root: Root,
   service_worker: false,
   templates: {
-    app: ({ head, body: body2, assets: assets2, nonce, env }) => '<!DOCTYPE html>\r\n<html lang="en">\r\n	<head>\r\n		<meta charset="utf-8" />\r\n		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\r\n		' + head + '\r\n	</head>\r\n	<body data-sveltekit-preload-data="hover">\r\n		<div style="display: contents">' + body2 + "</div>\r\n	</body>\r\n</html>\r\n",
+    app: ({ head, body: body2, assets: assets2, nonce, env }) => '<!DOCTYPE html>\r\n<html lang="en">\r\n	<head>\r\n		<meta charset="utf-8" />\r\n		<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">\r\n		' + head + '\r\n	</head>\r\n	<body data-sveltekit-preload-data="false">\r\n		<div style="display: contents">' + body2 + "</div>\r\n	</body>\r\n</html>",
     error: ({ status, message }) => '<!doctype html>\n<html lang="en">\n	<head>\n		<meta charset="utf-8" />\n		<title>' + message + `</title>
 
 		<style>
@@ -5588,7 +5588,7 @@ var options = {
 		<div class="error">
 			<span class="status">` + status + '</span>\n			<div class="message">\n				<h1>' + message + "</h1>\n			</div>\n		</div>\n	</body>\n</html>\n"
   },
-  version_hash: "15oct9y"
+  version_hash: "1x9hrip"
 };
 function get_hooks() {
   return {};
@@ -6298,11 +6298,11 @@ async function render_endpoint(event, mod, state) {
   if (!handler) {
     return method_not_allowed(mod, method);
   }
-  const prerender2 = mod.prerender ?? state.prerender_default;
-  if (prerender2 && (mod.POST || mod.PATCH || mod.PUT || mod.DELETE)) {
+  const prerender = mod.prerender ?? state.prerender_default;
+  if (prerender && (mod.POST || mod.PATCH || mod.PUT || mod.DELETE)) {
     throw new Error("Cannot prerender endpoints that have mutative methods");
   }
-  if (state.prerendering && !prerender2) {
+  if (state.prerendering && !prerender) {
     if (state.depth > 0) {
       throw new Error(`${event.route.id} is not prerenderable`);
     } else {
@@ -6325,7 +6325,7 @@ async function render_endpoint(event, mod, state) {
         statusText: response.statusText,
         headers: new Headers(response.headers)
       });
-      response.headers.set("x-sveltekit-prerender", String(prerender2));
+      response.headers.set("x-sveltekit-prerender", String(prerender));
     }
     return response;
   } catch (e3) {
@@ -7290,8 +7290,8 @@ var Csp = class {
    * @param {import('./types.js').CspConfig} config
    * @param {import('./types.js').CspOpts} opts
    */
-  constructor({ mode, directives, reportOnly }, { prerender: prerender2 }) {
-    const use_hashes = mode === "hash" || mode === "auto" && prerender2;
+  constructor({ mode, directives, reportOnly }, { prerender }) {
+    const use_hashes = mode === "hash" || mode === "auto" && prerender;
     this.csp_provider = new CspProvider(use_hashes, directives, this.nonce);
     this.report_only_provider = new CspReportOnlyProvider(use_hashes, reportOnly, this.nonce);
   }
@@ -7761,9 +7761,9 @@ async function respond_with_error({
   try {
     const branch = [];
     const default_layout = await manifest2._.nodes[0]();
-    const ssr = get_option([default_layout], "ssr") ?? true;
+    const ssr2 = get_option([default_layout], "ssr") ?? true;
     const csr = get_option([default_layout], "csr") ?? true;
-    if (ssr) {
+    if (ssr2) {
       state.error = true;
       const server_data_promise = load_server_data({
         event,
@@ -7801,7 +7801,7 @@ async function respond_with_error({
       manifest: manifest2,
       state,
       page_config: {
-        ssr,
+        ssr: ssr2,
         csr
       },
       status,
@@ -9055,7 +9055,7 @@ var manifest = (() => {
     assets: /* @__PURE__ */ new Set(["favicon.ico"]),
     mimeTypes: {},
     _: {
-      client: { "start": "_svelte/immutable/entry/start.8eec01bd.js", "app": "_svelte/immutable/entry/app.9f16196d.js", "imports": ["_svelte/immutable/entry/start.8eec01bd.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/singletons.52da4b92.js", "_svelte/immutable/chunks/index.5ba2287e.js", "_svelte/immutable/entry/app.9f16196d.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js"], "stylesheets": [], "fonts": [], "uses_env_dynamic_public": false },
+      client: { "start": "_svelte/immutable/entry/start.b3382858.js", "app": "_svelte/immutable/entry/app.b083d340.js", "imports": ["_svelte/immutable/entry/start.b3382858.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/singletons.c79871f0.js", "_svelte/immutable/chunks/index.5ba2287e.js", "_svelte/immutable/entry/app.b083d340.js", "_svelte/immutable/chunks/scheduler.abd4628c.js", "_svelte/immutable/chunks/index.b42942e1.js"], "stylesheets": [], "fonts": [], "uses_env_dynamic_public": false },
       nodes: [
         __memo(() => Promise.resolve().then(() => (init__(), __exports))),
         __memo(() => Promise.resolve().then(() => (init__2(), __exports2))),

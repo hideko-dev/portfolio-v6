@@ -1,5 +1,5 @@
 import { d as derived, w as writable } from "./index.js";
-import { k as get_store_value } from "./ssr.js";
+import { h as get_store_value } from "./ssr.js";
 function writableDerived(origins, derive, reflect, initial) {
   var childDerivedSetter, originValues, blockNextDerive = false;
   var reflectOldValues = reflect.length >= 2;
