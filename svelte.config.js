@@ -6,10 +6,11 @@ const config = {
 		postcss: true,
 	}),
 	kit: {
+		paths: {
+			base: "/"
+		},
 		adapter: adapter({
-			// fallback: './stands/fallback.html',
 			include: ['/*'],
-			exclude: ['<all>']
 		}),
 		appDir: "_svelte",
 		outDir: ".extend",
